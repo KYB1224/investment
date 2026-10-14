@@ -68,7 +68,10 @@
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">EMAIL</label>
-                    <input type="email" id="email" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                    <input type="email" id="email" list="saved-emails" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                    <datalist id="saved-emails">
+                        <!-- 動態載入歷史打過的 Email -->
+                    </datalist>
                 </div>
                 <div>
                     <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">PASSWORD</label>
@@ -280,7 +283,7 @@
             "00919": "群益台灣精選高息",
             "00981A": "統一台灣增長主動式ETF",
             "2317": "鴻海",
-            "2454": "聯発科"
+            "2454": "聯發科"
         };
         let nameMap = Object.fromEntries(Object.entries(stockMap).map(([k, v]) => [v, k]));
         let cachedTransactions = [];
@@ -289,6 +292,29 @@
         let marketDataCache = {};
         let marketSubTab = 'watchlist';
         let watchlist = JSON.parse(localStorage.getItem('my_watchlist') || '["2330", "00891", "2317", "2454"]');
+
+        // 初始化載入並渲染曾登入過的 Email 清單
+        function initEmailDatalist() {
+            const savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
+            const datalist = document.getElementById('saved-emails');
+            datalist.innerHTML = savedEmails.map(e => `<option value="${e}"></option>`).join('');
+
+            const emailInput = document.getElementById('email');
+            if (savedEmails.length > 0 && !emailInput.value) {
+                emailInput.value = savedEmails[0]; // 預設帶入最近一次使用的 Email
+            }
+        }
+
+        function saveEmailToLocalStorage(email) {
+            if (!email) return;
+            let savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
+            // 移除非重複的並置頂
+            savedEmails = savedEmails.filter(e => e !== email);
+            savedEmails.unshift(email);
+            // 最多保留 5 筆紀錄
+            if (savedEmails.length > 5) savedEmails = savedEmails.slice(0, 5);
+            localStorage.setItem('saved_login_emails', JSON.stringify(savedEmails));
+        }
 
         async function loadStockDictionary() {
             try {
@@ -421,6 +447,7 @@
                 const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
                 if (data && data.session) {
+                    saveEmailToLocalStorage(email);
                     showApp(data.session.user);
                 }
             } catch (err) {
@@ -442,6 +469,7 @@
             document.getElementById('app-section').classList.add('hidden');
             document.getElementById('bottom-nav').classList.add('hidden');
             document.getElementById('user-info').classList.add('hidden');
+            initEmailDatalist();
         }
 
         async function showApp(user) {
@@ -736,7 +764,6 @@
                 targetSymbols = Object.keys(allSymbolsMap);
             }
 
-            // 根據搜尋關鍵字過濾標的（符合代號或名稱）
             if (searchKeyword !== '') {
                 targetSymbols = targetSymbols.filter(sym => {
                     const name = (stockMap[sym] || '').toLowerCase();
