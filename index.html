@@ -66,7 +66,7 @@
             </h1>
             <div id="user-info" class="hidden flex items-center space-x-2.5">
                 <span id="user-email" class="text-[11px] tracking-tight bg-morandi-200/80 text-morandi-800 px-2.5 py-1 rounded-full truncate max-w-[110px]"></span>
-                <button onclick="handleLogout()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-2.5 py-1 rounded-lg text-[11px] font-medium transition">登入</button>
+                <button onclick="handleLogout()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-2.5 py-1 rounded-lg text-[11px] font-medium transition">登出</button>
             </div>
         </div>
     </header>
@@ -82,15 +82,11 @@
             </div>
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4" autocomplete="off">
                 <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-[11px] font-medium text-slate-500 tracking-wider">EMAIL</label>
-                        <!-- 歷史帳號快速選擇按鈕 -->
-                        <div id="saved-emails-container" class="hidden flex gap-1 items-center">
-                            <span class="text-[10px] text-slate-400">歷史帳號:</span>
-                            <div id="saved-emails-chips" class="flex gap-1 overflow-x-auto max-w-[200px]"></div>
-                        </div>
-                    </div>
-                    <input type="email" id="email" required autocomplete="off" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                    <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">EMAIL</label>
+                    <input type="email" id="email" list="saved-emails" onblur="saveEmailToLocalStorage(this.value)" required autocomplete="off" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                    <datalist id="saved-emails">
+                        <!-- 動態載入歷史打過的 Email -->
+                    </datalist>
                 </div>
                 <div>
                     <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">PASSWORD</label>
@@ -304,40 +300,27 @@
         let marketSubTab = 'watchlist';
         let watchlist = JSON.parse(localStorage.getItem('my_watchlist') || '["2330", "00891", "2317", "2454"]');
 
-        // 改良版：強制渲染歷史 Email 快捷按鈕
-        function initEmailChips() {
-            let savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
-            const container = document.getElementById('saved-emails-container');
-            const chipsEl = document.getElementById('saved-emails-chips');
+        // 初始化載入歷史 Email 列表到 datalist
+        function initEmailDatalist() {
+            const savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
+            const datalist = document.getElementById('saved-emails');
+            datalist.innerHTML = savedEmails.map(e => `<option value="${e}"></option>`).join('');
+
             const emailInput = document.getElementById('email');
-
-            if (savedEmails.length > 0) {
-                container.classList.remove('hidden');
-                chipsEl.innerHTML = savedEmails.map(e => `
-                    <button type="button" onclick="selectEmail('${e}')" class="bg-morandi-100 hover:bg-morandi-200 text-morandi-800 px-2 py-0.5 rounded text-[10px] font-medium truncate max-w-[100px]">
-                        ${e}
-                    </button>
-                `).join('');
-
-                if (!emailInput.value) {
-                    emailInput.value = savedEmails[0];
-                }
-            } else {
-                container.classList.add('hidden');
+            if (savedEmails.length > 0 && !emailInput.value) {
+                emailInput.value = savedEmails[0]; // 預設帶入最近一次使用的 Email
             }
-        }
-
-        function selectEmail(email) {
-            document.getElementById('email').value = email;
         }
 
         function saveEmailToLocalStorage(email) {
             if (!email) return;
+            email = email.trim();
             let savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
             savedEmails = savedEmails.filter(e => e !== email);
             savedEmails.unshift(email);
             if (savedEmails.length > 5) savedEmails = savedEmails.slice(0, 5);
             localStorage.setItem('saved_login_emails', JSON.stringify(savedEmails));
+            initEmailDatalist();
         }
 
         async function loadStockDictionary() {
@@ -485,7 +468,6 @@
 
         async function handleLogout() {
             await _supabase.auth.signOut();
-            // 登出時清空密碼欄位
             document.getElementById('password').value = '';
             showLogin();
         }
@@ -495,8 +477,8 @@
             document.getElementById('app-section').classList.add('hidden');
             document.getElementById('bottom-nav').classList.add('hidden');
             document.getElementById('user-info').classList.add('hidden');
-            document.getElementById('password').value = ''; // 確保密碼清空
-            initEmailChips();
+            document.getElementById('password').value = '';
+            initEmailDatalist();
         }
 
         async function showApp(user) {
