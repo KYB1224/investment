@@ -133,6 +133,12 @@
                     <button onclick="switchMarketSubTab('all')" id="subtab-all" class="flex-1 py-1.5 font-bold rounded-xl transition text-slate-500">📋 全部標的</button>
                 </div>
 
+                <!-- 搜尋輸入框 -->
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
+                    <input type="text" id="market-search-input" oninput="renderMarketList()" placeholder="輸入代號或名稱快速搜尋（例 2330、台積電）..." class="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 transition shadow-sm">
+                </div>
+
                 <div id="market-list" class="space-y-3.5">
                     <!-- 動態載入行情與近五日走勢 -->
                 </div>
@@ -274,7 +280,7 @@
             "00919": "群益台灣精選高息",
             "00981A": "統一台灣增長主動式ETF",
             "2317": "鴻海",
-            "2454": "聯發科"
+            "2454": "聯発科"
         };
         let nameMap = Object.fromEntries(Object.entries(stockMap).map(([k, v]) => [v, k]));
         let cachedTransactions = [];
@@ -715,6 +721,7 @@
 
         function renderMarketList() {
             const listEl = document.getElementById('market-list');
+            const searchKeyword = (document.getElementById('market-search-input').value || '').trim().toLowerCase();
             
             const activeSymbols = getActiveSymbolsList();
             const allSymbolsMap = {};
@@ -729,8 +736,17 @@
                 targetSymbols = Object.keys(allSymbolsMap);
             }
 
+            // 根據搜尋關鍵字過濾標的（符合代號或名稱）
+            if (searchKeyword !== '') {
+                targetSymbols = targetSymbols.filter(sym => {
+                    const name = (stockMap[sym] || '').toLowerCase();
+                    const s = sym.toLowerCase();
+                    return s.includes(searchKeyword) || name.includes(searchKeyword);
+                });
+            }
+
             if (targetSymbols.length === 0) {
-                listEl.innerHTML = `<div class="bg-white p-6 rounded-2xl text-center text-slate-400 text-xs shadow-sm border border-slate-100">目前沒有追蹤的標的，請在「全部」標的點擊星星加入追蹤</div>`;
+                listEl.innerHTML = `<div class="bg-white p-6 rounded-2xl text-center text-slate-400 text-xs shadow-sm border border-slate-100">找不到符合條件的標的</div>`;
                 return;
             }
 
