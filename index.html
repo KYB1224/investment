@@ -192,7 +192,7 @@
 
                     <div>
                         <label class="block text-[11px] font-medium text-slate-500 mb-1">名稱</label>
-                        <input type="text" id="tx-name" required placeholder="例 台積電" oninput="onNameInput()" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                        <input type="text" id="tx-name" required placeholder="例 台積電" oninput="onNameInput()" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                     </div>
 
                     <div id="buy-sell-fields" class="grid grid-cols-3 gap-2">
@@ -302,7 +302,6 @@
         let currentUser = null;
         let watchlist = [];
 
-        // 🚀 關鍵修正：依照使用者帳號動態載入專屬的追蹤名單
         function loadUserWatchlist() {
             if (!currentUser) return;
             const key = `my_watchlist_${currentUser.id}`;
@@ -459,7 +458,7 @@
             } else {
                 watchlist.push(sym);
             }
-            saveUserWatchlist(); // 儲存該使用者的專屬追蹤名單
+            saveUserWatchlist();
             renderMarketList();
         }
 
@@ -523,7 +522,7 @@
 
         async function showApp(user) {
             currentUser = user;
-            loadUserWatchlist(); // 載入登入使用者的專屬追蹤清單
+            loadUserWatchlist();
 
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
@@ -919,6 +918,7 @@
             }).join('');
         }
 
+        // 🎨 歷史明細全新優化渲染邏輯
         function renderHistoryList() {
             const listEl = document.getElementById('transaction-list');
             if (cachedTransactions.length === 0) {
@@ -935,21 +935,29 @@
                 const displayName = stockMap[tx.symbol] || tx.name || tx.symbol;
 
                 return `
-                    <div class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100 space-y-2">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <span class="text-[11px] text-slate-400 font-mono whitespace-nowrap">${tx.date}</span>
-                            ${badge}
-                            <span class="font-bold text-xs text-slate-800 truncate">${tx.symbol} (${displayName})</span>
+                    <div class="bg-slate-50/90 p-4 rounded-2xl border border-slate-100 space-y-2 shadow-sm">
+                        <!-- 第一排：日期與動作標籤（左），交易總額（右） -->
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-400 font-mono tracking-wide">${tx.date}</span>
+                                ${badge}
+                            </div>
+                            <span class="font-bold text-slate-900 text-base tracking-tight">NT$ ${Number(tx.amount).toLocaleString()}</span>
                         </div>
-                        <div class="flex justify-between items-end text-xs pt-1 border-t border-slate-100/60">
+
+                        <!-- 第二排：股票代號與完整中文名稱（獨立整排） -->
+                        <div class="text-sm font-bold text-slate-800 pt-0.5">
+                            <span class="font-mono mr-1">${tx.symbol}</span>
+                            <span class="text-slate-700">${displayName}</span>
+                        </div>
+
+                        <!-- 第三排：交易詳細數據（左），刪除按鈕（右） -->
+                        <div class="flex justify-between items-end pt-1 border-t border-slate-200/60 text-xs text-slate-500">
                             <div>
-                                <p class="text-slate-600 text-[11px]">${tx.action === 'DIVIDEND' ? '配息入帳 (股數: ' + tx.shares + ' | 每股: ' + tx.price + ')' : '股數: ' + tx.shares + ' | 單價: ' + tx.price}</p>
+                                <p class="text-[11px]">${tx.action === 'DIVIDEND' ? '配息入帳 (股數: ' + tx.shares + ' | 每股: ' + tx.price + ')' : '股數: ' + tx.shares + ' | 單價: ' + tx.price}</p>
                                 ${tx.note ? '<p class="text-slate-400 text-[10px] mt-0.5">備註: ' + tx.note + '</p>' : ''}
                             </div>
-                            <div class="text-right flex-shrink-0">
-                                <p class="font-bold text-slate-900 text-sm">NT$ ${Number(tx.amount).toLocaleString()}</p>
-                                <button onclick="deleteTx(${tx.id})" class="text-rose-500 hover:text-rose-700 text-[10px] underline mt-0.5">刪除</button>
-                            </div>
+                            <button onclick="deleteTx(${tx.id})" class="text-rose-500 hover:text-rose-700 text-[11px] font-medium underline flex-shrink-0 ml-2">刪除</button>
                         </div>
                     </div>
                 `;
