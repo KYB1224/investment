@@ -308,10 +308,8 @@
         function saveEmailToLocalStorage(email) {
             if (!email) return;
             let savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
-            // 移除非重複的並置頂
             savedEmails = savedEmails.filter(e => e !== email);
             savedEmails.unshift(email);
-            // 最多保留 5 筆紀錄
             if (savedEmails.length > 5) savedEmails = savedEmails.slice(0, 5);
             localStorage.setItem('saved_login_emails', JSON.stringify(savedEmails));
         }
@@ -480,7 +478,10 @@
             document.getElementById('user-email').textContent = user.email;
             
             await loadStockDictionary();
-            loadTransactions();
+            await loadTransactions();
+            
+            // 🚀 登入成功後自動在背景抓取最新行情，免去手動更新
+            fetchMarketData(true);
         }
 
         async function handleAddTransaction(e) {
@@ -547,15 +548,19 @@
             renderMarketList();
         }
 
-        async function fetchMarketData() {
+        // 🚀 優化：平行同時抓取行情，大幅縮短等待時間
+        async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
-            btn.disabled = true;
-            btn.textContent = '⏳ 更新中...';
+            if (!isBackground) {
+                btn.disabled = true;
+                btn.textContent = '⏳ 更新中...';
+            }
 
             const activeSymbols = getActiveSymbolsList();
             const allSymbolsToFetch = Array.from(new Set([...activeSymbols, ...watchlist, ...Object.keys(stockMap)]));
 
-            for (const sym of allSymbolsToFetch) {
+            // 同時發送所有股票的請求，不用排隊等待
+            await Promise.all(allSymbolsToFetch.map(async (sym) => {
                 try {
                     const { data, error } = await _supabase.functions.invoke('get-stock-price', {
                         body: { symbol: sym }
@@ -566,16 +571,18 @@
                 } catch (err) {
                     console.error(`取得 ${sym} 行情失敗:`, err);
                 }
-            }
+            }));
 
             renderSummary();
             renderMarketList();
 
-            btn.textContent = '✅ 更新完成';
-            setTimeout(() => {
-                btn.textContent = '🔄 更新行情';
-                btn.disabled = false;
-            }, 10000);
+            if (!isBackground) {
+                btn.textContent = '✅ 更新完成';
+                setTimeout(() => {
+                    btn.textContent = '🔄 更新行情';
+                    btn.disabled = false;
+                }, 10000);
+            }
         }
 
         function getActiveSymbolsList() {
