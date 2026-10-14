@@ -40,10 +40,25 @@
     </script>
     <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        input, select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            min-height: 44px;
+        }
+        select {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25em 1.25em;
+            padding-right: 2.25rem !important;
+        }
+    </style>
 </head>
 <body class="bg-morandi-50 text-slate-700 min-h-screen flex flex-col pb-24 select-none font-sans antialiased">
 
-    <!-- 頂部標題列 (明亮淺色版) -->
+    <!-- 頂部標題列 -->
     <header class="bg-morandi-100/90 backdrop-blur-md text-morandi-800 border-b border-morandi-200/60 sticky top-0 z-50 pt-safe transition-colors duration-300">
         <div class="max-w-md mx-auto px-5 py-3.5 flex justify-between items-center">
             <h1 class="text-sm tracking-wide font-bold flex items-center gap-2 text-morandi-800">
@@ -51,7 +66,7 @@
             </h1>
             <div id="user-info" class="hidden flex items-center space-x-2.5">
                 <span id="user-email" class="text-[11px] tracking-tight bg-morandi-200/80 text-morandi-800 px-2.5 py-1 rounded-full truncate max-w-[110px]"></span>
-                <button onclick="handleLogout()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-2.5 py-1 rounded-lg text-[11px] font-medium transition">登出</button>
+                <button onclick="handleLogout()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-2.5 py-1 rounded-lg text-[11px] font-medium transition">登入</button>
             </div>
         </div>
     </header>
@@ -65,19 +80,23 @@
                 <h2 class="text-lg font-bold text-morandi-800 tracking-wide">使用者登入</h2>
                 <p class="text-xs text-slate-400 mt-1">歡迎回到您的個人投資追蹤看板</p>
             </div>
-            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4" autocomplete="off">
                 <div>
-                    <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">EMAIL</label>
-                    <input type="email" id="email" list="saved-emails" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
-                    <datalist id="saved-emails">
-                        <!-- 動態載入歷史打過的 Email -->
-                    </datalist>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-[11px] font-medium text-slate-500 tracking-wider">EMAIL</label>
+                        <!-- 歷史帳號快速選擇按鈕 -->
+                        <div id="saved-emails-container" class="hidden flex gap-1 items-center">
+                            <span class="text-[10px] text-slate-400">歷史帳號:</span>
+                            <div id="saved-emails-chips" class="flex gap-1 overflow-x-auto max-w-[200px]"></div>
+                        </div>
+                    </div>
+                    <input type="email" id="email" required autocomplete="off" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                 </div>
                 <div>
                     <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">PASSWORD</label>
-                    <input type="password" id="password" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                    <input type="password" id="password" required autocomplete="new-password" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition" value="">
                 </div>
-                <button type="submit" id="login-btn" class="w-full bg-morandi-500 hover:bg-morandi-600 text-white font-medium py-3 rounded-2xl transition shadow-sm text-xs tracking-wide">登入系統</button>
+                <button type="submit" id="login-btn" class="w-full h-11 bg-morandi-500 hover:bg-morandi-600 text-white font-medium rounded-2xl transition shadow-sm text-xs tracking-wide">登入系統</button>
                 <p id="login-error" class="text-rose-600 text-xs text-center font-medium hidden mt-3 p-2.5 bg-rose-50 rounded-xl border border-rose-100"></p>
             </form>
         </div>
@@ -87,7 +106,6 @@
             
             <!-- 分頁一：持股總覽 -->
             <div id="panel-summary" class="space-y-3.5">
-                <!-- 總資產卡片 (淺色莫蘭迪綠高質感漸層) -->
                 <div class="bg-gradient-to-br from-morandi-100 via-morandi-200/70 to-morandi-100 text-morandi-800 p-5 rounded-3xl shadow-sm border border-morandi-200/80 space-y-3.5 relative overflow-hidden">
                     <div class="flex justify-between items-start relative z-10">
                         <div>
@@ -114,9 +132,7 @@
                     </div>
                 </div>
 
-                <div id="portfolio-list" class="space-y-3.5">
-                    <!-- 動態載入持股彙整 -->
-                </div>
+                <div id="portfolio-list" class="space-y-3.5"></div>
             </div>
 
             <!-- 分頁二：行情追蹤 -->
@@ -136,15 +152,12 @@
                     <button onclick="switchMarketSubTab('all')" id="subtab-all" class="flex-1 py-1.5 font-bold rounded-xl transition text-slate-500">📋 全部標的</button>
                 </div>
 
-                <!-- 搜尋輸入框 -->
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
-                    <input type="text" id="market-search-input" oninput="renderMarketList()" placeholder="輸入代號或名稱快速搜尋（例 2330、台積電）..." class="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 transition shadow-sm">
+                    <input type="text" id="market-search-input" oninput="renderMarketList()" placeholder="輸入代號或名稱快速搜尋（例 2330、台積電）..." class="w-full h-11 pl-9 pr-4 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 transition shadow-sm">
                 </div>
 
-                <div id="market-list" class="space-y-3.5">
-                    <!-- 動態載入行情與近五日走勢 -->
-                </div>
+                <div id="market-list" class="space-y-3.5"></div>
             </div>
 
             <!-- 分頁三：記帳登記 -->
@@ -154,11 +167,11 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">日期</label>
-                            <input type="date" id="tx-date" required class="w-full px-3.5 py-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="date" id="tx-date" required class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                         </div>
                         <div>
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">動作</label>
-                            <select id="tx-action" onchange="onActionChange()" class="w-full px-3.5 py-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 font-semibold text-morandi-700 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <select id="tx-action" onchange="onActionChange()" class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 font-semibold text-morandi-700 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                                 <option value="BUY">🟢 買進</option>
                                 <option value="SELL">🔴 賣出</option>
                                 <option value="DIVIDEND">💰 配息 / 股利</option>
@@ -169,34 +182,34 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">資產類型</label>
-                            <select id="tx-type" class="w-full px-3.5 py-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <select id="tx-type" class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                                 <option value="stock">股票 / ETF</option>
                                 <option value="fund">基金</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">代號</label>
-                            <input type="text" id="tx-symbol" required placeholder="例 2330" oninput="onSymbolInput()" class="w-full px-3.5 py-3 border border-slate-200 rounded-2xl text-xs uppercase bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="text" id="tx-symbol" required placeholder="例 2330" oninput="onSymbolInput()" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs uppercase bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-[11px] font-medium text-slate-500 mb-1">名稱</label>
-                        <input type="text" id="tx-name" required placeholder="例 台積電" oninput="onNameInput()" class="w-full px-3.5 py-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                        <input type="text" id="tx-name" required placeholder="例 台積電" oninput="onNameInput()" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                     </div>
 
                     <div id="buy-sell-fields" class="grid grid-cols-3 gap-2">
                         <div>
                             <label class="block text-[10px] font-medium text-slate-500 mb-1">股數/單位</label>
-                            <input type="number" step="any" id="tx-shares" value="0" class="w-full px-2.5 py-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="number" step="any" id="tx-shares" value="0" class="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                         </div>
                         <div>
                             <label class="block text-[10px] font-medium text-slate-500 mb-1">單價/淨值</label>
-                            <input type="number" step="any" id="tx-price" value="0" class="w-full px-2.5 py-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="number" step="any" id="tx-price" value="0" class="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                         </div>
                         <div>
                             <label class="block text-[10px] font-medium text-slate-500 mb-1">手續費/稅</label>
-                            <input type="number" step="any" id="tx-fee" value="0" class="w-full px-2.5 py-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="number" step="any" id="tx-fee" value="0" class="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                         </div>
                     </div>
 
@@ -204,26 +217,26 @@
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="block text-[10px] font-medium text-amber-800 mb-1">配息持有股數</label>
-                                <input type="number" step="any" id="tx-div-shares" value="0" oninput="calculateDividendTotal()" placeholder="例 1000" class="w-full px-3 py-3 border border-amber-200 rounded-2xl text-xs bg-white focus:ring-2 focus:ring-amber-300 focus:outline-none transition">
+                                <input type="number" step="any" id="tx-div-shares" value="0" oninput="calculateDividendTotal()" placeholder="例 1000" class="w-full h-11 px-3 border border-amber-200 rounded-2xl text-xs bg-white focus:ring-2 focus:ring-amber-300 focus:outline-none transition">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-medium text-amber-800 mb-1">每股配息 (元)</label>
-                                <input type="number" step="any" id="tx-div-per-share" value="0" oninput="calculateDividendTotal()" placeholder="例 1.5" class="w-full px-3 py-3 border border-amber-200 rounded-2xl text-xs bg-white focus:ring-2 focus:ring-amber-300 focus:outline-none transition">
+                                <input type="number" step="any" id="tx-div-per-share" value="0" oninput="calculateDividendTotal()" placeholder="例 1.5" class="w-full h-11 px-3 border border-amber-200 rounded-2xl text-xs bg-white focus:ring-2 focus:ring-amber-300 focus:outline-none transition">
                             </div>
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-[11px] font-medium text-slate-500 mb-1">總金額 (台幣)</label>
-                        <input type="number" step="any" id="tx-amount" required placeholder="總金額" class="w-full px-3.5 py-3 border border-morandi-200 rounded-2xl text-sm font-bold text-morandi-800 bg-morandi-100/40 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
+                        <input type="number" step="any" id="tx-amount" required placeholder="總金額" class="w-full h-11 px-3.5 border border-morandi-200 rounded-2xl text-sm font-bold text-morandi-800 bg-morandi-100/40 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                     </div>
 
                     <div>
                         <label class="block text-[11px] font-medium text-slate-500 mb-1">備註 (選填)</label>
-                        <input type="text" id="tx-note" placeholder="例如：定期定額、心得..." class="w-full px-3.5 py-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
+                        <input type="text" id="tx-note" placeholder="例如：定期定額、心得..." class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                     </div>
 
-                    <button type="submit" class="w-full bg-morandi-500 hover:bg-morandi-600 text-white font-medium py-3.5 rounded-2xl transition text-xs tracking-wide shadow-sm">確認送出紀錄</button>
+                    <button type="submit" class="w-full h-12 bg-morandi-500 hover:bg-morandi-600 text-white font-medium rounded-2xl transition text-xs tracking-wide shadow-sm">確認送出紀錄</button>
                 </form>
             </div>
 
@@ -231,9 +244,7 @@
             <div id="panel-history" class="hidden space-y-3">
                 <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
                     <h3 class="text-xs font-bold mb-3.5 text-morandi-800 tracking-wide flex items-center gap-1.5">📋 歷史明細</h3>
-                    <div id="transaction-list" class="space-y-3">
-                        <!-- 動態載入歷史明細 -->
-                    </div>
+                    <div id="transaction-list" class="space-y-3"></div>
                 </div>
             </div>
 
@@ -241,7 +252,7 @@
 
     </main>
 
-    <!-- 底部固定導航列 (淺色莫蘭迪質感) -->
+    <!-- 底部固定導航列 -->
     <nav id="bottom-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-lg z-50 py-2 px-4 pb-safe">
         <div class="max-w-md mx-auto flex justify-around items-center">
             <button onclick="switchTab('summary')" id="tab-summary" class="flex flex-col items-center text-morandi-600 font-bold text-[10px] transition">
@@ -293,16 +304,31 @@
         let marketSubTab = 'watchlist';
         let watchlist = JSON.parse(localStorage.getItem('my_watchlist') || '["2330", "00891", "2317", "2454"]');
 
-        // 初始化載入並渲染曾登入過的 Email 清單
-        function initEmailDatalist() {
-            const savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
-            const datalist = document.getElementById('saved-emails');
-            datalist.innerHTML = savedEmails.map(e => `<option value="${e}"></option>`).join('');
-
+        // 改良版：強制渲染歷史 Email 快捷按鈕
+        function initEmailChips() {
+            let savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
+            const container = document.getElementById('saved-emails-container');
+            const chipsEl = document.getElementById('saved-emails-chips');
             const emailInput = document.getElementById('email');
-            if (savedEmails.length > 0 && !emailInput.value) {
-                emailInput.value = savedEmails[0]; // 預設帶入最近一次使用的 Email
+
+            if (savedEmails.length > 0) {
+                container.classList.remove('hidden');
+                chipsEl.innerHTML = savedEmails.map(e => `
+                    <button type="button" onclick="selectEmail('${e}')" class="bg-morandi-100 hover:bg-morandi-200 text-morandi-800 px-2 py-0.5 rounded text-[10px] font-medium truncate max-w-[100px]">
+                        ${e}
+                    </button>
+                `).join('');
+
+                if (!emailInput.value) {
+                    emailInput.value = savedEmails[0];
+                }
+            } else {
+                container.classList.add('hidden');
             }
+        }
+
+        function selectEmail(email) {
+            document.getElementById('email').value = email;
         }
 
         function saveEmailToLocalStorage(email) {
@@ -459,6 +485,8 @@
 
         async function handleLogout() {
             await _supabase.auth.signOut();
+            // 登出時清空密碼欄位
+            document.getElementById('password').value = '';
             showLogin();
         }
 
@@ -467,7 +495,8 @@
             document.getElementById('app-section').classList.add('hidden');
             document.getElementById('bottom-nav').classList.add('hidden');
             document.getElementById('user-info').classList.add('hidden');
-            initEmailDatalist();
+            document.getElementById('password').value = ''; // 確保密碼清空
+            initEmailChips();
         }
 
         async function showApp(user) {
@@ -479,8 +508,6 @@
             
             await loadStockDictionary();
             await loadTransactions();
-            
-            // 🚀 登入成功後自動在背景抓取最新行情，免去手動更新
             fetchMarketData(true);
         }
 
@@ -548,7 +575,6 @@
             renderMarketList();
         }
 
-        // 🚀 優化：平行同時抓取行情，大幅縮短等待時間
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
             if (!isBackground) {
@@ -559,7 +585,6 @@
             const activeSymbols = getActiveSymbolsList();
             const allSymbolsToFetch = Array.from(new Set([...activeSymbols, ...watchlist, ...Object.keys(stockMap)]));
 
-            // 同時發送所有股票的請求，不用排隊等待
             await Promise.all(allSymbolsToFetch.map(async (sym) => {
                 try {
                     const { data, error } = await _supabase.functions.invoke('get-stock-price', {
@@ -878,14 +903,11 @@
 
                 return `
                     <div class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100 space-y-2">
-                        <!-- 第一列：日期、動作標籤與股票代號名稱 -->
                         <div class="flex items-center gap-2 min-w-0">
                             <span class="text-[11px] text-slate-400 font-mono whitespace-nowrap">${tx.date}</span>
                             ${badge}
                             <span class="font-bold text-xs text-slate-800 truncate">${tx.symbol} (${tx.name})</span>
                         </div>
-
-                        <!-- 第二列：規格說明與金額/刪除按鈕 -->
                         <div class="flex justify-between items-end text-xs pt-1 border-t border-slate-100/60">
                             <div>
                                 <p class="text-slate-600 text-[11px]">${tx.action === 'DIVIDEND' ? '配息入帳 (股數: ' + tx.shares + ' | 每股: ' + tx.price + ')' : '股數: ' + tx.shares + ' | 單價: ' + tx.price}</p>
