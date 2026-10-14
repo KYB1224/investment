@@ -85,9 +85,8 @@
                     <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">EMAIL</label>
                     <input type="email" id="email" required autocomplete="off" onfocus="showEmailHistoryDropdown()" onblur="setTimeout(hideEmailHistoryDropdown, 200)" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                     
-                    <!-- 專屬歷史 Email 彈出清單 (完美避開 iOS 限制) -->
+                    <!-- 專屬歷史 Email 彈出清單 -->
                     <div id="email-history-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden divide-y divide-slate-100 max-h-40 overflow-y-auto">
-                        <!-- 動態插入歷史 Email -->
                     </div>
                 </div>
                 <div>
@@ -300,9 +299,22 @@
         let expandedMarketSymbols = {};
         let marketDataCache = {};
         let marketSubTab = 'watchlist';
-        let watchlist = JSON.parse(localStorage.getItem('my_watchlist') || '["2330", "00891", "2317", "2454"]');
+        let currentUser = null;
+        let watchlist = [];
 
-        // 🚀 徹底解決 Email 歷史選單問題（自訂選單元件，不受 iOS 原生 datalist 限制）
+        // 🚀 關鍵修正：依照使用者帳號動態載入專屬的追蹤名單
+        function loadUserWatchlist() {
+            if (!currentUser) return;
+            const key = `my_watchlist_${currentUser.id}`;
+            watchlist = JSON.parse(localStorage.getItem(key) || '["2330", "00891", "2317", "2454"]');
+        }
+
+        function saveUserWatchlist() {
+            if (!currentUser) return;
+            const key = `my_watchlist_${currentUser.id}`;
+            localStorage.setItem(key, JSON.stringify(watchlist));
+        }
+
         function showEmailHistoryDropdown() {
             const savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
             const dropdown = document.getElementById('email-history-dropdown');
@@ -346,7 +358,7 @@
             const savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
             const emailInput = document.getElementById('email');
             if (savedEmails.length > 0 && !emailInput.value) {
-                emailInput.value = savedEmails[0]; // 自動預設帶入最後一次登入的 Email
+                emailInput.value = savedEmails[0];
             }
         }
 
@@ -447,7 +459,7 @@
             } else {
                 watchlist.push(sym);
             }
-            localStorage.setItem('my_watchlist', JSON.stringify(watchlist));
+            saveUserWatchlist(); // 儲存該使用者的專屬追蹤名單
             renderMarketList();
         }
 
@@ -481,7 +493,7 @@
                 const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
                 if (data && data.session) {
-                    saveEmailToLocalStorage(email); // 成功登入後記憶 Email
+                    saveEmailToLocalStorage(email);
                     showApp(data.session.user);
                 }
             } catch (err) {
@@ -495,6 +507,7 @@
 
         async function handleLogout() {
             await _supabase.auth.signOut();
+            currentUser = null;
             document.getElementById('password').value = '';
             showLogin();
         }
@@ -509,6 +522,9 @@
         }
 
         async function showApp(user) {
+            currentUser = user;
+            loadUserWatchlist(); // 載入登入使用者的專屬追蹤清單
+
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
             document.getElementById('bottom-nav').classList.remove('hidden');
@@ -601,7 +617,6 @@
                     });
                     if (!error && data) {
                         marketDataCache[sym] = data;
-                        // 🚀 核心優化：如果爬蟲回傳了中文股票名稱，一併存入字典中
                         if (data.name) {
                             stockMap[sym] = data.name;
                             nameMap[data.name] = sym;
@@ -827,7 +842,6 @@
 
             listEl.innerHTML = targetSymbols.map(sym => {
                 const info = marketDataCache[sym];
-                // 🚀 正確取得中文股票名稱
                 const stockName = stockMap[sym] || (info && info.name ? info.name : sym);
                 const price = info ? info.price : '--';
                 const ma5 = info ? info.ma5 : '--';
