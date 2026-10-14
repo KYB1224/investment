@@ -81,12 +81,14 @@
                 <p class="text-xs text-slate-400 mt-1">歡迎回到您的個人投資追蹤看板</p>
             </div>
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4" autocomplete="off">
-                <div>
+                <div class="relative">
                     <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">EMAIL</label>
-                    <input type="email" id="email" list="saved-emails" onblur="saveEmailToLocalStorage(this.value)" required autocomplete="off" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
-                    <datalist id="saved-emails">
-                        <!-- 動態載入歷史打過的 Email -->
-                    </datalist>
+                    <input type="email" id="email" required autocomplete="off" onfocus="showEmailHistoryDropdown()" onblur="setTimeout(hideEmailHistoryDropdown, 200)" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                    
+                    <!-- 專屬歷史 Email 彈出清單 (完美避開 iOS 限制) -->
+                    <div id="email-history-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden divide-y divide-slate-100 max-h-40 overflow-y-auto">
+                        <!-- 動態插入歷史 Email -->
+                    </div>
                 </div>
                 <div>
                     <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">PASSWORD</label>
@@ -300,27 +302,52 @@
         let marketSubTab = 'watchlist';
         let watchlist = JSON.parse(localStorage.getItem('my_watchlist') || '["2330", "00891", "2317", "2454"]');
 
-        // 初始化載入歷史 Email 列表到 datalist
-        function initEmailDatalist() {
+        // 🚀 徹底解決 Email 歷史選單問題（自訂選單元件，不受 iOS 原生 datalist 限制）
+        function showEmailHistoryDropdown() {
             const savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
-            const datalist = document.getElementById('saved-emails');
-            datalist.innerHTML = savedEmails.map(e => `<option value="${e}"></option>`).join('');
-
-            const emailInput = document.getElementById('email');
-            if (savedEmails.length > 0 && !emailInput.value) {
-                emailInput.value = savedEmails[0]; // 預設帶入最近一次使用的 Email
+            const dropdown = document.getElementById('email-history-dropdown');
+            
+            if (savedEmails.length === 0) {
+                dropdown.classList.add('hidden');
+                return;
             }
+
+            dropdown.innerHTML = savedEmails.map(email => `
+                <div onclick="selectEmail('${email}')" class="px-4 py-2.5 text-xs text-slate-700 hover:bg-morandi-50 cursor-pointer flex justify-between items-center active:bg-morandi-100">
+                    <span>${email}</span>
+                    <span class="text-[10px] text-slate-400">歷史帳號</span>
+                </div>
+            `).join('');
+            
+            dropdown.classList.remove('hidden');
+        }
+
+        function hideEmailHistoryDropdown() {
+            document.getElementById('email-history-dropdown').classList.add('hidden');
+        }
+
+        function selectEmail(email) {
+            const emailInput = document.getElementById('email');
+            emailInput.value = email;
+            hideEmailHistoryDropdown();
         }
 
         function saveEmailToLocalStorage(email) {
-            if (!email) return;
-            email = email.trim();
+            if (!email || !email.includes('@')) return;
+            email = email.trim().toLowerCase();
             let savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
             savedEmails = savedEmails.filter(e => e !== email);
             savedEmails.unshift(email);
             if (savedEmails.length > 5) savedEmails = savedEmails.slice(0, 5);
             localStorage.setItem('saved_login_emails', JSON.stringify(savedEmails));
-            initEmailDatalist();
+        }
+
+        function loadInitialEmail() {
+            const savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
+            const emailInput = document.getElementById('email');
+            if (savedEmails.length > 0 && !emailInput.value) {
+                emailInput.value = savedEmails[0]; // 自動預設帶入最後一次登入的 Email
+            }
         }
 
         async function loadStockDictionary() {
@@ -454,7 +481,7 @@
                 const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
                 if (data && data.session) {
-                    saveEmailToLocalStorage(email);
+                    saveEmailToLocalStorage(email); // 成功登入後記憶 Email
                     showApp(data.session.user);
                 }
             } catch (err) {
@@ -478,7 +505,7 @@
             document.getElementById('bottom-nav').classList.add('hidden');
             document.getElementById('user-info').classList.add('hidden');
             document.getElementById('password').value = '';
-            initEmailDatalist();
+            loadInitialEmail();
         }
 
         async function showApp(user) {
@@ -574,6 +601,11 @@
                     });
                     if (!error && data) {
                         marketDataCache[sym] = data;
+                        // 🚀 核心優化：如果爬蟲回傳了中文股票名稱，一併存入字典中
+                        if (data.name) {
+                            stockMap[sym] = data.name;
+                            nameMap[data.name] = sym;
+                        }
                     }
                 } catch (err) {
                     console.error(`取得 ${sym} 行情失敗:`, err);
@@ -690,6 +722,8 @@
                 const profitColor = profitAmt >= 0 ? 'text-emerald-600' : 'text-rose-600';
                 const profitSign = profitAmt >= 0 ? '+' : '';
 
+                const displayName = stockMap[item.symbol] || item.name || item.symbol;
+
                 const subTxsHtml = item.txs.map(tx => {
                     let badge = '';
                     if (tx.action === 'BUY') badge = '<span class="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">買進</span>';
@@ -720,7 +754,7 @@
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-1.5 min-w-0">
                                 <span class="font-bold text-sm text-slate-800 tracking-wide whitespace-nowrap">${item.symbol}</span>
-                                <span class="text-xs text-slate-500 truncate">${item.name}</span>
+                                <span class="text-xs text-slate-500 truncate">${displayName}</span>
                                 <span class="text-[10px] text-morandi-600 bg-morandi-100/80 px-2 py-0.5 rounded-md font-medium whitespace-nowrap">${isExpanded ? '▲ 收合' : '▼ 明細'}</span>
                             </div>
                             <span class="text-[10px] px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap ${item.asset_type === 'stock' ? 'bg-morandi-100 text-morandi-800' : 'bg-purple-50 text-purple-700'}">${item.asset_type === 'stock' ? '股票/ETF' : '基金'}</span>
@@ -793,7 +827,8 @@
 
             listEl.innerHTML = targetSymbols.map(sym => {
                 const info = marketDataCache[sym];
-                const stockName = stockMap[sym] || sym;
+                // 🚀 正確取得中文股票名稱
+                const stockName = stockMap[sym] || (info && info.name ? info.name : sym);
                 const price = info ? info.price : '--';
                 const ma5 = info ? info.ma5 : '--';
                 const ma10 = info ? info.ma10 : '--';
@@ -883,12 +918,14 @@
                 else if (tx.action === 'SELL') badge = '<span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">賣出</span>';
                 else badge = '<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">配息</span>';
 
+                const displayName = stockMap[tx.symbol] || tx.name || tx.symbol;
+
                 return `
                     <div class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100 space-y-2">
                         <div class="flex items-center gap-2 min-w-0">
                             <span class="text-[11px] text-slate-400 font-mono whitespace-nowrap">${tx.date}</span>
                             ${badge}
-                            <span class="font-bold text-xs text-slate-800 truncate">${tx.symbol} (${tx.name})</span>
+                            <span class="font-bold text-xs text-slate-800 truncate">${tx.symbol} (${displayName})</span>
                         </div>
                         <div class="flex justify-between items-end text-xs pt-1 border-t border-slate-100/60">
                             <div>
