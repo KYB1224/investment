@@ -137,8 +137,8 @@
             <div id="panel-market" class="hidden space-y-3.5">
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
                     <div>
-                        <h3 class="text-xs font-bold text-morandi-800 tracking-wide">📈 市場行情與均線追蹤</h3>
-                        <p class="text-[10px] text-slate-400 mt-0.5">台灣證交所 (TWSE) 與鉅亨網基金即時淨值</p>
+                        <h3 class="text-xs font-bold text-morandi-800 tracking-wide">📈 市場行情與基金淨值追蹤</h3>
+                        <p class="text-[10px] text-slate-400 mt-0.5">證交所 (TWSE) 與鉅亨網即時淨值自動同步</p>
                     </div>
                     <button id="refresh-market-btn" onclick="fetchMarketData()" class="bg-morandi-500 hover:bg-morandi-600 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition shadow-sm flex items-center gap-1.5 whitespace-nowrap">
                         🔄 更新行情
@@ -199,7 +199,7 @@
 
                     <!-- 基金代號專用提示 -->
                     <div id="fund-hint-text" class="hidden -mt-1 text-[10px] text-morandi-600 font-medium px-1 flex items-center gap-1">
-                        💡 基金請輸入<b>鉅亨網代碼</b>（如 A36004、A23015、A20012、A3Mp9ya）
+                        💡 基金請輸入鉅亨網代碼（如 A36004、A23015、A20012、A3Mp9ya）
                     </div>
 
                     <div>
@@ -699,7 +699,7 @@
         }
 
         function toggleMarketExpand(symbol) {
-            if (symbol === 'IX0001' || /[a-zA-Z]/.test(symbol)) return;
+            if (symbol === 'IX0001') return;
             expandedMarketSymbols[symbol] = !expandedMarketSymbols[symbol];
             renderMarketList();
         }
@@ -719,8 +719,7 @@
                 ...activeSymbols, 
                 ...watchlist, 
                 ...Object.keys(stockMap),
-                'IX0001', '0050', '0056', '00878', '00919', '2330', '00891', '00918',
-                'A36004', 'A23015', 'A20012', 'A3Mp9ya' // 預先納入使用者的 4 檔基金
+                'IX0001', '0050', '0056', '00878', '00919', '2330'
             ]));
 
             await Promise.all(allSymbolsToFetch.map(async (sym) => {
@@ -728,9 +727,9 @@
                     const { data, error } = await _supabase.functions.invoke('get-stock-price', {
                         body: { symbol: sym }
                     });
-                    if (!error && data) {
+                    if (!error && data && data.price > 0) {
                         marketDataCache[sym] = data;
-                        if (data.name) {
+                        if (data.name && data.name !== sym) {
                             stockMap[sym] = data.name;
                             nameMap[data.name] = sym;
                         }
@@ -812,7 +811,9 @@
             const activeSymbols = Object.values(portfolio).filter(p => p.shares > 0 || p.totalCost > 0 || p.dividends > 0);
 
             activeSymbols.forEach(item => {
-                const livePrice = marketDataCache[item.symbol] ? marketDataCache[item.symbol].price : (item.shares > 0 ? item.totalCost / item.shares : 0);
+                const livePrice = marketDataCache[item.symbol] && marketDataCache[item.symbol].price > 0 
+                    ? marketDataCache[item.symbol].price 
+                    : (item.shares > 0 ? item.totalCost / item.shares : 0);
                 item.marketValue = item.shares * livePrice;
                 totalMarketValueAll += item.marketValue;
             });
@@ -842,7 +843,9 @@
                 const avgPrice = item.shares > 0 ? (item.totalCost / item.shares).toFixed(2) : 0;
                 const isExpanded = !!expandedSymbols[item.symbol];
 
-                const livePrice = marketDataCache[item.symbol] ? marketDataCache[item.symbol].price : (item.shares > 0 ? Number(avgPrice) : 0);
+                const livePrice = marketDataCache[item.symbol] && marketDataCache[item.symbol].price > 0 
+                    ? marketDataCache[item.symbol].price 
+                    : (item.shares > 0 ? Number(avgPrice) : 0);
                 const marketVal = item.shares * livePrice;
                 const profitAmt = marketVal - item.totalCost;
                 const profitPct = item.totalCost > 0 ? ((profitAmt / item.totalCost) * 100).toFixed(2) : 0;
@@ -957,13 +960,43 @@
             listEl.innerHTML = targetSymbols.map(sym => {
                 const info = marketDataCache[sym];
                 const stockName = stockMap[sym] || (info && info.name ? info.name : sym);
-                const price = info ? info.price : '--';
+                const price = info && info.price > 0 ? info.price : '--';
                 const isStarred = watchlist.includes(sym);
-                const isFund = /[a-zA-Z]/.test(sym);
+                const isFund = /[a-zA-Z]/.test(sym) && sym !== 'IX0001';
 
-                // 基金不需要均線與近五日明細，顯示淨值更新狀態即可
                 let detailsHtml = '';
-                if (!isFund && sym !== 'IX0001') {
+                if (sym === 'IX0001') {
+                    detailsHtml = `
+                        <div class="pt-2 border-t border-slate-100/80 flex justify-between items-center text-[11px] text-morandi-700 bg-morandi-50 px-3 py-2 rounded-xl">
+                            <span>📊 台灣證交所大盤加權指數</span>
+                            <span class="font-bold">現價: ${price}</span>
+                        </div>
+                    `;
+                } else if (isFund) {
+                    const isExpanded = !!expandedMarketSymbols[sym];
+                    let innerContent = `<p class="text-[11px] text-slate-400 text-center py-2">載入中或未取得歷史淨值...</p>`;
+                    if (info && info.history && info.history.length > 0) {
+                        innerContent = info.history.map((h) => `
+                            <div class="flex justify-between items-center bg-purple-50/60 px-3 py-2 rounded-xl text-[11px]">
+                                <span class="text-slate-500 font-medium">${h.date}</span>
+                                <span class="text-purple-800 font-bold">單位淨值: ${h.close}</span>
+                            </div>
+                        `).join('');
+                    }
+
+                    detailsHtml = `
+                        <div class="pt-2 border-t border-slate-100/80 flex justify-between items-center text-[11px] text-purple-700 bg-purple-50/50 px-3 py-2 rounded-xl">
+                            <span>💡 共同基金（鉅亨網自動淨值同步）</span>
+                            <span class="font-bold">最新淨值: ${price}</span>
+                        </div>
+                        ${isExpanded ? `
+                            <div class="pt-2 mt-1 border-t border-purple-100 space-y-1.5 cursor-default" onclick="event.stopPropagation()">
+                                <p class="text-[11px] font-bold text-purple-800 mb-1">📅 近期單位淨值走勢：</p>
+                                ${innerContent}
+                            </div>
+                        ` : ''}
+                    `;
+                } else {
                     const ma5 = info ? info.ma5 : '--';
                     const ma10 = info ? info.ma10 : '--';
                     const ma20 = info ? info.ma20 : '--';
@@ -1021,16 +1054,9 @@
                             </div>
                         ` : ''}
                     `;
-                } else if (isFund) {
-                    detailsHtml = `
-                        <div class="pt-2 border-t border-slate-100/80 flex justify-between items-center text-[11px] text-purple-700 bg-purple-50/50 px-3 py-2 rounded-xl">
-                            <span>💡 共同基金（鉅亨網即時淨值同步）</span>
-                            <span class="font-bold">單位淨值: ${price}</span>
-                        </div>
-                    `;
                 }
 
-                let expandLabel = (!isFund && sym !== 'IX0001') ? `<span class="text-[10px] text-morandi-600 bg-morandi-100/80 px-2 py-0.5 rounded-md font-medium whitespace-nowrap">${!!expandedMarketSymbols[sym] ? '▲ 收合' : '▼ 近五日'}</span>` : '';
+                let expandLabel = (sym !== 'IX0001') ? `<span class="text-[10px] ${isFund ? 'text-purple-600 bg-purple-100/80' : 'text-morandi-600 bg-morandi-100/80'} px-2 py-0.5 rounded-md font-medium whitespace-nowrap">${!!expandedMarketSymbols[sym] ? '▲ 收合' : '▼ 明細'}</span>` : '';
 
                 return `
                     <div onclick="toggleMarketExpand('${sym}')" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-3 cursor-pointer hover:border-morandi-300 transition">
