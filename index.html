@@ -150,9 +150,15 @@
                     <button onclick="switchMarketSubTab('all')" id="subtab-all" class="flex-1 py-1.5 font-bold rounded-xl transition text-slate-500">📋 全部標的</button>
                 </div>
 
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
-                    <input type="text" id="market-search-input" oninput="renderMarketList()" placeholder="輸入代號或名稱快速搜尋（例 2330、台積電）..." class="w-full h-11 pl-9 pr-4 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 transition shadow-sm">
+                <!-- 搜尋列與排序按鈕並排 -->
+                <div class="flex gap-2 items-center">
+                    <div class="relative flex-grow">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
+                        <input type="text" id="market-search-input" oninput="renderMarketList()" placeholder="輸入代號或名稱快速搜尋..." class="w-full h-11 pl-9 pr-4 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 transition shadow-sm">
+                    </div>
+                    <button id="sort-watchlist-btn" onclick="openSortModal()" class="hidden bg-morandi-100 hover:bg-morandi-200 text-morandi-800 px-4 h-11 rounded-2xl text-xs font-bold transition shadow-sm whitespace-nowrap items-center gap-1 border border-morandi-200">
+                        🔄 排序
+                    </button>
                 </div>
 
                 <div id="market-list" class="space-y-3.5"></div>
@@ -249,6 +255,20 @@
         </div>
 
     </main>
+
+    <!-- 彈出式追蹤清單排序視窗 -->
+    <div id="sort-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-xl border border-slate-100 space-y-4 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-sm font-bold text-morandi-800 flex items-center gap-1.5">↕️ 排序設定</h3>
+                <button onclick="closeSortModal()" class="text-slate-400 hover:text-slate-600 text-sm px-2 py-1">✕</button>
+            </div>
+            <div id="sort-list-container" class="space-y-2 overflow-y-auto flex-grow divide-y divide-slate-50">
+                <!-- 動態填入排序項目 -->
+            </div>
+            <button onclick="closeSortModal()" class="w-full h-11 bg-morandi-500 hover:bg-morandi-600 text-white font-medium rounded-2xl transition text-xs shadow-sm">完成排序</button>
+        </div>
+    </div>
 
     <!-- 底部固定導航列 -->
     <nav id="bottom-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-lg z-50 pt-2.5 pb-6 px-4">
@@ -449,12 +469,17 @@
 
         function switchMarketSubTab(sub) {
             marketSubTab = sub;
+            const sortBtn = document.getElementById('sort-watchlist-btn');
             if (sub === 'watchlist') {
                 document.getElementById('subtab-watchlist').className = "flex-1 py-1.5 font-bold rounded-xl transition bg-white text-morandi-700 shadow-sm";
                 document.getElementById('subtab-all').className = "flex-1 py-1.5 font-bold rounded-xl transition text-slate-500";
+                sortBtn.classList.remove('hidden');
+                sortBtn.classList.add('flex');
             } else {
                 document.getElementById('subtab-watchlist').className = "flex-1 py-1.5 font-bold rounded-xl transition text-slate-500";
                 document.getElementById('subtab-all').className = "flex-1 py-1.5 font-bold rounded-xl transition bg-white text-morandi-700 shadow-sm";
+                sortBtn.classList.remove('flex');
+                sortBtn.classList.add('hidden');
             }
             renderMarketList();
         }
@@ -470,13 +495,46 @@
             renderMarketList();
         }
 
-        async function moveWatchlist(index, direction) {
+        function openSortModal() {
+            if (watchlist.length === 0) {
+                alert('目前沒有追蹤中的標的可以排序');
+                return;
+            }
+            renderSortModalList();
+            document.getElementById('sort-modal').classList.remove('hidden');
+        }
+
+        function closeSortModal() {
+            document.getElementById('sort-modal').classList.add('hidden');
+            renderMarketList();
+        }
+
+        function renderSortModalList() {
+            const container = document.getElementById('sort-list-container');
+            container.innerHTML = watchlist.map((sym, idx) => {
+                const stockName = stockMap[sym] || sym;
+                return `
+                    <div class="flex justify-between items-center py-2 px-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-xs text-slate-800">${sym}</span>
+                            <span class="text-xs text-slate-500 truncate max-w-[120px]">${stockName}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="moveWatchlistModal(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-25 cursor-not-allowed"' : ''} class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center justify-center transition">⬆</button>
+                            <button onclick="moveWatchlistModal(${idx}, 1)" ${idx === watchlist.length - 1 ? 'disabled class="opacity-25 cursor-not-allowed"' : ''} class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center justify-center transition">⬇</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function moveWatchlistModal(index, direction) {
             const newIndex = index + direction;
             if (newIndex < 0 || newIndex >= watchlist.length) return;
             const item = watchlist.splice(index, 1)[0];
             watchlist.splice(newIndex, 0, item);
             await saveUserWatchlist();
-            renderMarketList();
+            renderSortModalList();
         }
 
         async function checkUser() {
@@ -863,7 +921,7 @@
                 return;
             }
 
-            listEl.innerHTML = targetSymbols.map((sym, idx) => {
+            listEl.innerHTML = targetSymbols.map(sym => {
                 const info = marketDataCache[sym];
                 const stockName = stockMap[sym] || (info && info.name ? info.name : sym);
                 const price = info ? info.price : '--';
@@ -873,17 +931,6 @@
                 const ma60 = info ? info.ma60 : '--';
                 const isStarred = watchlist.includes(sym);
                 const isExpanded = !!expandedMarketSymbols[sym];
-
-                let moveControls = '';
-                if (marketSubTab === 'watchlist') {
-                    moveControls = `
-                        <div class="flex items-center gap-1 bg-morandi-50 px-2 py-1 rounded-xl border border-morandi-100" onclick="event.stopPropagation()">
-                            <span class="text-[10px] text-slate-400 mr-1">排序</span>
-                            <button onclick="moveWatchlist(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="text-xs bg-white px-1.5 py-0.5 rounded shadow-sm text-morandi-700 font-bold">⬆</button>
-                            <button onclick="moveWatchlist(${idx}, 1)" ${idx === watchlist.length - 1 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="text-xs bg-white px-1.5 py-0.5 rounded shadow-sm text-morandi-700 font-bold">⬇</button>
-                        </div>
-                    `;
-                }
 
                 let fiveDaysHtml = `<p class="text-[11px] text-slate-400 text-center py-2">尚未載入近五日收盤明細，請點擊上方「更新行情」</p>`;
                 if (info && info.history && info.history.length > 0) {
@@ -923,12 +970,6 @@
                             </div>
                             <span class="text-xs font-bold text-morandi-800 bg-morandi-100/70 px-2.5 py-1 rounded-xl border border-morandi-200/50 whitespace-nowrap">現價: ${price}</span>
                         </div>
-
-                        ${marketSubTab === 'watchlist' ? `
-                            <div class="flex justify-between items-center pt-1">
-                                <span class="text-[10px] text-slate-400">編號: ${sym}</span>${moveControls}
-                            </div>
-                        ` : ''}
 
                         <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-100/80 text-center text-xs">
                             <div class="bg-slate-50 p-2 rounded-2xl">
