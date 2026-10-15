@@ -138,7 +138,7 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
                     <div>
                         <h3 class="text-xs font-bold text-morandi-800 tracking-wide">📈 市場行情與均線追蹤</h3>
-                        <p class="text-[10px] text-slate-400 mt-0.5">台灣證交所 (TWSE) 官方即時/盤後價</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">台灣證交所 (TWSE) 與鉅亨網基金即時淨值</p>
                     </div>
                     <button id="refresh-market-btn" onclick="fetchMarketData()" class="bg-morandi-500 hover:bg-morandi-600 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition shadow-sm flex items-center gap-1.5 whitespace-nowrap">
                         🔄 更新行情
@@ -186,7 +186,7 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">資產類型</label>
-                            <select id="tx-type" class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <select id="tx-type" onchange="onTypeChange()" class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                                 <option value="stock">股票 / ETF</option>
                                 <option value="fund">基金</option>
                             </select>
@@ -195,6 +195,11 @@
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">代號</label>
                             <input type="text" id="tx-symbol" required placeholder="例 2330" oninput="onSymbolInput()" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs uppercase bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
                         </div>
+                    </div>
+
+                    <!-- 基金代號專用提示 -->
+                    <div id="fund-hint-text" class="hidden -mt-1 text-[10px] text-morandi-600 font-medium px-1 flex items-center gap-1">
+                        💡 基金請輸入<b>鉅亨網代碼</b>（如 A36004、A23015、A20012、A3Mp9ya）
                     </div>
 
                     <div>
@@ -423,6 +428,20 @@
             }
         }
 
+        function onTypeChange() {
+            const type = document.getElementById('tx-type').value;
+            const symbolInput = document.getElementById('tx-symbol');
+            const hintText = document.getElementById('fund-hint-text');
+
+            if (type === 'fund') {
+                symbolInput.placeholder = "例 A36004";
+                hintText.classList.remove('hidden');
+            } else {
+                symbolInput.placeholder = "例 2330";
+                hintText.classList.add('hidden');
+            }
+        }
+
         function onActionChange() {
             const action = document.getElementById('tx-action').value;
             const buySellFields = document.getElementById('buy-sell-fields');
@@ -616,7 +635,6 @@
             await loadStockDictionary();
             await loadTransactions();
             
-            // 🚀 登入後自動背景更新所有標的
             fetchMarketData(true);
         }
 
@@ -670,6 +688,7 @@
             document.getElementById('transaction-form').reset();
             document.getElementById('tx-date').valueAsDate = new Date();
             onActionChange();
+            onTypeChange();
             loadTransactions();
             switchTab('summary');
         }
@@ -680,12 +699,11 @@
         }
 
         function toggleMarketExpand(symbol) {
-            if (symbol === 'IX0001') return;
+            if (symbol === 'IX0001' || /[a-zA-Z]/.test(symbol)) return;
             expandedMarketSymbols[symbol] = !expandedMarketSymbols[symbol];
             renderMarketList();
         }
 
-        // 🚀 完全修復：強制完整抓取所有字典與清單的即時行情
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
             if (!isBackground) {
@@ -697,15 +715,14 @@
 
             const activeSymbols = getActiveSymbolsList();
             
-            // 包含所有持股、追蹤清單、以及資料庫 stocks 表格裡的所有股票代號
             const allSymbolsToFetch = Array.from(new Set([
                 ...activeSymbols, 
                 ...watchlist, 
                 ...Object.keys(stockMap),
-                'IX0001', '0050', '0056', '00878', '00919', '2330', '00891', '00918'
+                'IX0001', '0050', '0056', '00878', '00919', '2330', '00891', '00918',
+                'A36004', 'A23015', 'A20012', 'A3Mp9ya' // 預先納入使用者的 4 檔基金
             ]));
 
-            // 同時平行發送請求（Promise.all），確保「全部標的」分頁的所有項目都有即時數據
             await Promise.all(allSymbolsToFetch.map(async (sym) => {
                 try {
                     const { data, error } = await _supabase.functions.invoke('get-stock-price', {
@@ -848,7 +865,7 @@
                                     <span class="text-slate-400 whitespace-nowrap">${tx.date}</span>
                                     ${badge}
                                 </div>
-                                <span class="text-slate-600">${tx.action === 'DIVIDEND' ? '配息入帳 (股數: ' + tx.shares + ' | 每股: ' + tx.price + ')' : '股數: ' + tx.shares + ' | 單價: ' + tx.price}</span>
+                                <span class="text-slate-600">${tx.action === 'DIVIDEND' ? '配息入帳 (單位數: ' + tx.shares + ' | 每單位: ' + tx.price + ')' : '單位數: ' + tx.shares + ' | 淨值: ' + tx.price}</span>
                                 ${tx.note ? '<span class="text-slate-400 ml-1">(' + tx.note + ')</span>' : ''}
                             </div>
                             <div class="text-right">
@@ -873,7 +890,7 @@
                         
                         <div class="grid grid-cols-2 pt-2 border-t border-slate-100/80 text-[11px] gap-y-1.5">
                             <div>
-                                <span class="text-slate-400">持有股數：</span><b class="text-morandi-700">${item.shares.toLocaleString()}</b>
+                                <span class="text-slate-400">持有單位：</span><b class="text-morandi-700">${item.shares.toLocaleString()}</b>
                             </div>
                             <div class="text-right">
                                 <span class="text-slate-400">平均成本：</span><b>${Number(avgPrice).toLocaleString()}</b>
@@ -915,7 +932,6 @@
             activeSymbols.forEach(s => allSymbolsMap[s] = stockMap[s] || s);
             Object.keys(stockMap).forEach(s => allSymbolsMap[s] = stockMap[s]);
             watchlist.forEach(s => { if(!allSymbolsMap[s]) allSymbolsMap[s] = stockMap[s] || s; });
-            // 確保所有快取裡的標的也都納入全部標的清單
             Object.keys(marketDataCache).forEach(s => { if(!allSymbolsMap[s]) allSymbolsMap[s] = stockMap[s] || s; });
 
             let targetSymbols = [];
@@ -942,18 +958,17 @@
                 const info = marketDataCache[sym];
                 const stockName = stockMap[sym] || (info && info.name ? info.name : sym);
                 const price = info ? info.price : '--';
-                const ma5 = info ? info.ma5 : '--';
-                const ma10 = info ? info.ma10 : '--';
-                const ma20 = info ? info.ma20 : '--';
-                const ma60 = info ? info.ma60 : '--';
                 const isStarred = watchlist.includes(sym);
-                const isExpanded = !!expandedMarketSymbols[sym];
+                const isFund = /[a-zA-Z]/.test(sym);
 
-                let expandLabel = '';
-                let fiveDaysHtml = '';
-
-                if (sym !== 'IX0001') {
-                    expandLabel = `<span class="text-[10px] text-morandi-600 bg-morandi-100/80 px-2 py-0.5 rounded-md font-medium whitespace-nowrap">${isExpanded ? '▲ 收合' : '▼ 近五日'}</span>`;
+                // 基金不需要均線與近五日明細，顯示淨值更新狀態即可
+                let detailsHtml = '';
+                if (!isFund && sym !== 'IX0001') {
+                    const ma5 = info ? info.ma5 : '--';
+                    const ma10 = info ? info.ma10 : '--';
+                    const ma20 = info ? info.ma20 : '--';
+                    const ma60 = info ? info.ma60 : '--';
+                    const isExpanded = !!expandedMarketSymbols[sym];
                     
                     let innerContent = `<p class="text-[11px] text-slate-400 text-center py-2">尚未載入近五日收盤明細，請點擊上方「更新行情」</p>`;
                     if (info && info.history && info.history.length > 0) {
@@ -980,30 +995,7 @@
                         }).join('');
                     }
 
-                    if (isExpanded) {
-                        fiveDaysHtml = `
-                            <div class="pt-3 mt-1 border-t border-slate-100 space-y-1.5 cursor-default" onclick="event.stopPropagation()">
-                                <p class="text-[11px] font-bold text-morandi-700 mb-1">📅 近五日開盤收盤與漲幅走勢：</p>
-                                ${innerContent}
-                            </div>
-                        `;
-                    }
-                }
-
-                return `
-                    <div onclick="toggleMarketExpand('${sym}')" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-3 cursor-pointer hover:border-morandi-300 transition">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-1.5 min-w-0">
-                                <button onclick="event.stopPropagation(); toggleWatchlist('${sym}')" class="text-lg focus:outline-none" title="加入/移除追蹤">
-                                    ${isStarred ? '⭐' : '☆'}
-                                </button>
-                                <span class="font-bold text-sm text-slate-800 tracking-wide whitespace-nowrap">${sym}</span>
-                                <span class="text-xs text-slate-500 truncate">${stockName}</span>
-                                ${expandLabel}
-                            </div>
-                            <span class="text-xs font-bold text-morandi-800 bg-morandi-100/70 px-2.5 py-1 rounded-xl border border-morandi-200/50 whitespace-nowrap">現價: ${price}</span>
-                        </div>
-
+                    detailsHtml = `
                         <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-100/80 text-center text-xs">
                             <div class="bg-slate-50 p-2 rounded-2xl">
                                 <span class="text-[10px] text-slate-400 block">5日線</span>
@@ -1022,8 +1014,39 @@
                                 <b class="text-slate-700">${ma60}</b>
                             </div>
                         </div>
+                        ${isExpanded ? `
+                            <div class="pt-3 mt-1 border-t border-slate-100 space-y-1.5 cursor-default" onclick="event.stopPropagation()">
+                                <p class="text-[11px] font-bold text-morandi-700 mb-1">📅 近五日開盤收盤與漲幅走勢：</p>
+                                ${innerContent}
+                            </div>
+                        ` : ''}
+                    `;
+                } else if (isFund) {
+                    detailsHtml = `
+                        <div class="pt-2 border-t border-slate-100/80 flex justify-between items-center text-[11px] text-purple-700 bg-purple-50/50 px-3 py-2 rounded-xl">
+                            <span>💡 共同基金（鉅亨網即時淨值同步）</span>
+                            <span class="font-bold">單位淨值: ${price}</span>
+                        </div>
+                    `;
+                }
 
-                        ${fiveDaysHtml}
+                let expandLabel = (!isFund && sym !== 'IX0001') ? `<span class="text-[10px] text-morandi-600 bg-morandi-100/80 px-2 py-0.5 rounded-md font-medium whitespace-nowrap">${!!expandedMarketSymbols[sym] ? '▲ 收合' : '▼ 近五日'}</span>` : '';
+
+                return `
+                    <div onclick="toggleMarketExpand('${sym}')" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-3 cursor-pointer hover:border-morandi-300 transition">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <button onclick="event.stopPropagation(); toggleWatchlist('${sym}')" class="text-lg focus:outline-none" title="加入/移除追蹤">
+                                    ${isStarred ? '⭐' : '☆'}
+                                </button>
+                                <span class="font-bold text-sm text-slate-800 tracking-wide whitespace-nowrap">${sym}</span>
+                                <span class="text-xs text-slate-500 truncate">${stockName}</span>
+                                ${expandLabel}
+                            </div>
+                            <span class="text-xs font-bold ${isFund ? 'text-purple-700 bg-purple-100/70 border-purple-200/50' : 'text-morandi-800 bg-morandi-100/70 border-morandi-200/50'} px-2.5 py-1 rounded-xl border whitespace-nowrap">${isFund ? '淨值' : '現價'}: ${price}</span>
+                        </div>
+
+                        ${detailsHtml}
                     </div>
                 `;
             }).join('');
@@ -1061,7 +1084,7 @@
 
                         <div class="flex justify-between items-end pt-1 border-t border-slate-200/60 text-xs text-slate-500">
                             <div>
-                                <p class="text-[11px]">${tx.action === 'DIVIDEND' ? '配息入帳 (股數: ' + tx.shares + ' | 每股: ' + tx.price + ')' : '股數: ' + tx.shares + ' | 單價: ' + tx.price}</p>
+                                <p class="text-[11px]">${tx.action === 'DIVIDEND' ? '配息入帳 (單位數: ' + tx.shares + ' | 每單位: ' + tx.price + ')' : '單位數: ' + tx.shares + ' | 淨值: ' + tx.price}</p>
                                 ${tx.note ? '<p class="text-slate-400 text-[10px] mt-0.5">備註: ' + tx.note + '</p>' : ''}
                             </div>
                             <button onclick="deleteTx(${tx.id})" class="text-rose-500 hover:text-rose-700 text-[11px] font-medium underline flex-shrink-0 ml-2">刪除</button>
