@@ -5,17 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>投資理財小幫手</title>
 
-    <!-- iOS Safari 專用 PWA 設定與專屬質感桌面圖示 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="投資小幫手">
     <link rel="apple-touch-icon" href="./icon.png?v=2">
-    <link rel="apple-touch-icon-precomposed" href="./icon.png?v=2">
-
-    <!-- Android Chrome 專用 Manifest 連結 -->
     <link rel="manifest" href="manifest.json?v=2">
 
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -39,7 +34,6 @@
             }
         }
     </script>
-    <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         input, select {
@@ -59,7 +53,6 @@
 </head>
 <body class="bg-morandi-50 text-slate-700 min-h-screen flex flex-col pb-28 select-none font-sans antialiased">
 
-    <!-- 頂部標題列 -->
     <header class="bg-morandi-100/95 backdrop-blur-md text-morandi-800 border-b border-morandi-200/60 sticky top-0 z-50 pt-10 pb-3 transition-colors duration-300 shadow-sm">
         <div class="max-w-md mx-auto px-5 flex justify-between items-center">
             <h1 class="text-sm tracking-wide font-bold flex items-center gap-2 text-morandi-800">
@@ -84,15 +77,12 @@
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4" autocomplete="off">
                 <div class="relative">
                     <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">EMAIL</label>
-                    <input type="email" id="email" required autocomplete="off" onfocus="showEmailHistoryDropdown()" onblur="setTimeout(hideEmailHistoryDropdown, 200)" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
-                    
-                    <!-- 專屬歷史 Email 彈出清單 -->
-                    <div id="email-history-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden divide-y divide-slate-100 max-h-40 overflow-y-auto">
-                    </div>
+                    <input type="email" id="email" required autocomplete="off" onfocus="showEmailHistoryDropdown()" onblur="setTimeout(hideEmailHistoryDropdown, 200)" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
+                    <div id="email-history-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden divide-y divide-slate-100 max-h-40 overflow-y-auto"></div>
                 </div>
                 <div>
                     <label class="block text-[11px] font-medium text-slate-500 mb-1 tracking-wider">PASSWORD</label>
-                    <input type="password" id="password" required autocomplete="new-password" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition" value="">
+                    <input type="password" id="password" required autocomplete="new-password" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition" value="">
                 </div>
                 <button type="submit" id="login-btn" class="w-full h-11 bg-morandi-500 hover:bg-morandi-600 text-white font-medium rounded-2xl transition shadow-sm text-xs tracking-wide">登入系統</button>
                 <p id="login-error" class="text-rose-600 text-xs text-center font-medium hidden mt-3 p-2.5 bg-rose-50 rounded-xl border border-rose-100"></p>
@@ -137,26 +127,34 @@
             <div id="panel-market" class="hidden space-y-3.5">
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
                     <div>
-                        <h3 class="text-xs font-bold text-morandi-800 tracking-wide">📈 市場行情與基金淨值追蹤</h3>
-                        <p class="text-[10px] text-slate-400 mt-0.5">證交所 (TWSE) 與鉅亨網即時淨值自動同步</p>
+                        <h3 class="text-xs font-bold text-morandi-800 tracking-wide">📈 市場行情與淨值追蹤看板</h3>
+                        <p class="text-[10px] text-slate-400 mt-0.5">證交所與鉅亨網即時自動同步</p>
                     </div>
                     <button id="refresh-market-btn" onclick="fetchMarketData()" class="bg-morandi-500 hover:bg-morandi-600 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition shadow-sm flex items-center gap-1.5 whitespace-nowrap">
                         🔄 更新行情
                     </button>
                 </div>
 
-                <div class="flex bg-slate-200/60 p-1 rounded-2xl shadow-inner text-xs">
-                    <button onclick="switchMarketSubTab('watchlist')" id="subtab-watchlist" class="flex-1 py-1.5 font-bold rounded-xl transition bg-white text-morandi-700 shadow-sm">⭐ 我的追蹤</button>
-                    <button onclick="switchMarketSubTab('all')" id="subtab-all" class="flex-1 py-1.5 font-bold rounded-xl transition text-slate-500">📋 全部標的</button>
+                <!-- 💡 核心三大子分頁：追蹤、股票/ETF、共同基金 -->
+                <div class="grid grid-cols-3 gap-1 bg-slate-200/60 p-1 rounded-2xl shadow-inner text-xs font-bold">
+                    <button onclick="switchMarketTab('watchlist')" id="mtab-watchlist" class="py-2 rounded-xl transition bg-white text-morandi-700 shadow-sm flex items-center justify-center gap-1">
+                        ⭐ 我的追蹤
+                    </button>
+                    <button onclick="switchMarketTab('stock')" id="mtab-stock" class="py-2 rounded-xl transition text-slate-500 flex items-center justify-center gap-1">
+                        📈 股票/ETF
+                    </button>
+                    <button onclick="switchMarketTab('fund')" id="mtab-fund" class="py-2 rounded-xl transition text-slate-500 flex items-center justify-center gap-1">
+                        💡 共同基金
+                    </button>
                 </div>
 
                 <!-- 搜尋列與排序按鈕 -->
                 <div class="flex gap-2 items-center">
                     <div class="relative flex-grow">
                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
-                        <input type="text" id="market-search-input" oninput="renderMarketList()" placeholder="輸入代號或名稱快速搜尋..." class="w-full h-11 pl-9 pr-4 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 transition shadow-sm">
+                        <input type="text" id="market-search-input" oninput="renderMarketList()" placeholder="輸入代號或名稱快速搜尋..." class="w-full h-11 pl-9 pr-4 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-morandi-300 transition shadow-sm">
                     </div>
-                    <button id="sort-watchlist-btn" onclick="openSortModal()" class="hidden bg-morandi-100 hover:bg-morandi-200 text-morandi-800 px-4 h-11 rounded-2xl text-xs font-bold transition shadow-sm whitespace-nowrap items-center border border-morandi-200">
+                    <button id="sort-watchlist-btn" onclick="openSortModal()" class="bg-morandi-100 hover:bg-morandi-200 text-morandi-800 px-4 h-11 rounded-2xl text-xs font-bold transition shadow-sm whitespace-nowrap flex items-center border border-morandi-200">
                         排序
                     </button>
                 </div>
@@ -171,11 +169,11 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">日期</label>
-                            <input type="date" id="tx-date" required class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="date" id="tx-date" required class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                         </div>
                         <div>
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">動作</label>
-                            <select id="tx-action" onchange="onActionChange()" class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 font-semibold text-morandi-700 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <select id="tx-action" onchange="onActionChange()" class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 font-semibold text-morandi-700 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                                 <option value="BUY">🟢 買進</option>
                                 <option value="SELL">🔴 賣出</option>
                                 <option value="DIVIDEND">💰 配息 / 股利</option>
@@ -186,20 +184,19 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">資產類型</label>
-                            <select id="tx-type" onchange="onTypeChange()" class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <select id="tx-type" onchange="onTypeChange()" class="w-full h-11 px-3 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                                 <option value="stock">股票 / ETF</option>
                                 <option value="fund">基金</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-[11px] font-medium text-slate-500 mb-1">代號</label>
-                            <input type="text" id="tx-symbol" required placeholder="例 2330" oninput="onSymbolInput()" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs uppercase bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="text" id="tx-symbol" required placeholder="例 2330" oninput="onSymbolInput()" class="w-full h-11 px-3.5 border border-slate-200 rounded-2xl text-xs uppercase bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                         </div>
                     </div>
 
-                    <!-- 基金代號專用提示 -->
                     <div id="fund-hint-text" class="hidden -mt-1 text-[10px] text-morandi-600 font-medium px-1 flex items-center gap-1">
-                        💡 基金請輸入鉅亨網代碼（如 A36004、A23015、A20012、A3Mp9ya）
+                        💡 基金請輸入鉅亨網代碼（如 A36004、A23015 等）
                     </div>
 
                     <div>
@@ -210,15 +207,15 @@
                     <div id="buy-sell-fields" class="grid grid-cols-3 gap-2">
                         <div>
                             <label class="block text-[10px] font-medium text-slate-500 mb-1">股數/單位</label>
-                            <input type="number" step="any" id="tx-shares" value="0" class="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="number" step="any" id="tx-shares" value="0" class="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                         </div>
                         <div>
                             <label class="block text-[10px] font-medium text-slate-500 mb-1">單價/淨值</label>
-                            <input type="number" step="any" id="tx-price" value="0" class="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="number" step="any" id="tx-price" value="0" class="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                         </div>
                         <div>
                             <label class="block text-[10px] font-medium text-slate-500 mb-1">手續費/稅</label>
-                            <input type="number" step="any" id="tx-fee" value="0" class="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 focus:outline-none transition">
+                            <input type="number" step="any" id="tx-fee" value="0" class="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-morandi-300 focus:outline-none transition">
                         </div>
                     </div>
 
@@ -261,21 +258,18 @@
 
     </main>
 
-    <!-- 彈出式追蹤清單排序視窗 -->
+    <!-- 排序視窗 -->
     <div id="sort-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-xl border border-slate-100 space-y-4 max-h-[80vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-sm font-bold text-morandi-800 flex items-center gap-1.5">↕️ 排序設定</h3>
+                <h3 class="text-sm font-bold text-morandi-800 flex items-center gap-1.5">↕️ 追蹤清單排序設定</h3>
                 <button onclick="closeSortModal()" class="text-slate-400 hover:text-slate-600 text-sm px-2 py-1">✕</button>
             </div>
-            <div id="sort-list-container" class="space-y-2 overflow-y-auto flex-grow divide-y divide-slate-50">
-                <!-- 動態填入排序項目 -->
-            </div>
+            <div id="sort-list-container" class="space-y-2 overflow-y-auto flex-grow divide-y divide-slate-50"></div>
             <button onclick="closeSortModal()" class="w-full h-11 bg-morandi-500 hover:bg-morandi-600 text-white font-medium rounded-2xl transition text-xs shadow-sm">完成排序</button>
         </div>
     </div>
 
-    <!-- 底部固定導航列 -->
     <nav id="bottom-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-lg z-50 pt-2.5 pb-6 px-4">
         <div class="max-w-md mx-auto flex justify-around items-center">
             <button onclick="switchTab('summary')" id="tab-summary" class="flex flex-col items-center text-morandi-600 font-bold text-[10px] transition">
@@ -297,7 +291,6 @@
         </div>
     </nav>
 
-    <!-- App 核心邏輯 -->
     <script>
         const SUPABASE_URL = "https://yjdsvekbvzgkkvbgyoso.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_nyw5nDgN4fGMK_LsezMJug_25xMjLSz";
@@ -316,7 +309,7 @@
         let expandedSymbols = {};
         let expandedMarketSymbols = {};
         let marketDataCache = {};
-        let marketSubTab = 'watchlist';
+        let activeMarketTab = 'watchlist'; // 三大子分頁：'watchlist', 'stock', 'fund'
         let currentUser = null;
         let watchlist = [];
 
@@ -348,32 +341,17 @@
         function showEmailHistoryDropdown() {
             const savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
             const dropdown = document.getElementById('email-history-dropdown');
-            
-            if (savedEmails.length === 0) {
-                dropdown.classList.add('hidden');
-                return;
-            }
-
+            if (savedEmails.length === 0) { dropdown.classList.add('hidden'); return; }
             dropdown.innerHTML = savedEmails.map(email => `
-                <div onclick="selectEmail('${email}')" class="px-4 py-2.5 text-xs text-slate-700 hover:bg-morandi-50 cursor-pointer flex justify-between items-center active:bg-morandi-100">
-                    <span>${email}</span>
-                    <span class="text-[10px] text-slate-400">歷史帳號</span>
+                <div onclick="selectEmail('${email}')" class="px-4 py-2.5 text-xs text-slate-700 hover:bg-morandi-50 cursor-pointer flex justify-between items-center">
+                    <span>${email}</span><span class="text-[10px] text-slate-400">歷史帳號</span>
                 </div>
             `).join('');
-            
             dropdown.classList.remove('hidden');
         }
 
-        function hideEmailHistoryDropdown() {
-            document.getElementById('email-history-dropdown').classList.add('hidden');
-        }
-
-        function selectEmail(email) {
-            const emailInput = document.getElementById('email');
-            emailInput.value = email;
-            hideEmailHistoryDropdown();
-        }
-
+        function hideEmailHistoryDropdown() { document.getElementById('email-history-dropdown').classList.add('hidden'); }
+        function selectEmail(email) { document.getElementById('email').value = email; hideEmailHistoryDropdown(); }
         function saveEmailToLocalStorage(email) {
             if (!email || !email.includes('@')) return;
             email = email.trim().toLowerCase();
@@ -383,13 +361,10 @@
             if (savedEmails.length > 5) savedEmails = savedEmails.slice(0, 5);
             localStorage.setItem('saved_login_emails', JSON.stringify(savedEmails));
         }
-
         function loadInitialEmail() {
             const savedEmails = JSON.parse(localStorage.getItem('saved_login_emails') || '[]');
             const emailInput = document.getElementById('email');
-            if (savedEmails.length > 0 && !emailInput.value) {
-                emailInput.value = savedEmails[0];
-            }
+            if (savedEmails.length > 0 && !emailInput.value) emailInput.value = savedEmails[0];
         }
 
         async function loadStockDictionary() {
@@ -411,28 +386,21 @@
         function onSymbolInput() {
             const symbol = document.getElementById('tx-symbol').value.trim().toUpperCase();
             const nameInput = document.getElementById('tx-name');
-            if (symbol === "") {
-                nameInput.value = "";
-            } else if (stockMap[symbol]) {
-                nameInput.value = stockMap[symbol];
-            }
+            if (symbol === "") nameInput.value = "";
+            else if (stockMap[symbol]) nameInput.value = stockMap[symbol];
         }
 
         function onNameInput() {
             const name = document.getElementById('tx-name').value.trim();
             const symbolInput = document.getElementById('tx-symbol');
-            if (name === "") {
-                symbolInput.value = "";
-            } else if (nameMap[name]) {
-                symbolInput.value = nameMap[name];
-            }
+            if (name === "") symbolInput.value = "";
+            else if (nameMap[name]) symbolInput.value = nameMap[name];
         }
 
         function onTypeChange() {
             const type = document.getElementById('tx-type').value;
             const symbolInput = document.getElementById('tx-symbol');
             const hintText = document.getElementById('fund-hint-text');
-
             if (type === 'fund') {
                 symbolInput.placeholder = "例 A36004";
                 hintText.classList.remove('hidden');
@@ -447,7 +415,6 @@
             const buySellFields = document.getElementById('buy-sell-fields');
             const dividendFields = document.getElementById('dividend-fields');
             const amountInput = document.getElementById('tx-amount');
-
             if (action === 'DIVIDEND') {
                 buySellFields.classList.add('hidden');
                 dividendFields.classList.remove('hidden');
@@ -476,65 +443,58 @@
                 const btn = document.getElementById(`tab-${t}`);
                 if (btn) btn.className = "flex flex-col items-center text-slate-400 font-medium text-[10px] transition";
             });
-            
             document.getElementById(`panel-${tab}`).classList.remove('hidden');
             const activeBtn = document.getElementById(`tab-${tab}`);
             if (activeBtn) activeBtn.className = "flex flex-col items-center text-morandi-600 font-bold text-[10px] transition";
-
-            if (tab === 'market') {
-                renderMarketList();
-            }
+            if (tab === 'market') renderMarketList();
         }
 
-        function switchMarketSubTab(sub) {
-            marketSubTab = sub;
+        // 💡 三大子分頁切換邏輯
+        function switchMarketTab(tab) {
+            activeMarketTab = tab;
+            const tabs = ['watchlist', 'stock', 'fund'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`mtab-${t}`);
+                if (t === tab) {
+                    btn.className = "py-2 rounded-xl transition bg-white text-morandi-700 shadow-sm flex items-center justify-center gap-1";
+                } else {
+                    btn.className = "py-2 rounded-xl transition text-slate-500 flex items-center justify-center gap-1";
+                }
+            });
+
             const sortBtn = document.getElementById('sort-watchlist-btn');
-            if (sub === 'watchlist') {
-                document.getElementById('subtab-watchlist').className = "flex-1 py-1.5 font-bold rounded-xl transition bg-white text-morandi-700 shadow-sm";
-                document.getElementById('subtab-all').className = "flex-1 py-1.5 font-bold rounded-xl transition text-slate-500";
+            if (tab === 'watchlist') {
                 sortBtn.classList.remove('hidden');
                 sortBtn.classList.add('flex');
             } else {
-                document.getElementById('subtab-watchlist').className = "flex-1 py-1.5 font-bold rounded-xl transition text-slate-500";
-                document.getElementById('subtab-all').className = "flex-1 py-1.5 font-bold rounded-xl transition bg-white text-morandi-700 shadow-sm";
                 sortBtn.classList.remove('flex');
                 sortBtn.classList.add('hidden');
             }
+
             renderMarketList();
         }
 
         async function toggleWatchlist(sym) {
             const index = watchlist.indexOf(sym);
-            if (index > -1) {
-                watchlist.splice(index, 1);
-            } else {
-                watchlist.push(sym);
-            }
+            if (index > -1) watchlist.splice(index, 1);
+            else watchlist.push(sym);
             await saveUserWatchlist();
             renderMarketList();
         }
 
         function openSortModal() {
-            if (watchlist.length === 0) {
-                alert('目前沒有追蹤中的標的可以排序');
-                return;
-            }
+            if (watchlist.length === 0) { alert('目前沒有追蹤中的標的可以排序'); return; }
             renderSortModalList();
             document.getElementById('sort-modal').classList.remove('hidden');
         }
 
-        function closeSortModal() {
-            document.getElementById('sort-modal').classList.add('hidden');
-            renderMarketList();
-        }
+        function closeSortModal() { document.getElementById('sort-modal').classList.add('hidden'); renderMarketList(); }
 
         function renderSortModalList() {
             const container = document.getElementById('sort-list-container');
             container.innerHTML = watchlist.map((sym, idx) => {
                 const stockName = stockMap[sym] || sym;
-                const isFirst = idx === 0;
-                const isLast = idx === watchlist.length - 1;
-
+                const isFirst = idx === 0, isLast = idx === watchlist.length - 1;
                 return `
                     <div class="flex justify-between items-center py-2 px-1">
                         <div class="flex items-center gap-2 min-w-0">
@@ -542,8 +502,8 @@
                             <span class="text-xs text-slate-500 truncate max-w-[140px]">${stockName}</span>
                         </div>
                         <div class="flex items-center gap-1.5 flex-shrink-0">
-                            <button onclick="moveWatchlistModal(${idx}, -1)" ${isFirst ? 'disabled' : ''} class="w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center transition ${isFirst ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">⬆</button>
-                            <button onclick="moveWatchlistModal(${idx}, 1)" ${isLast ? 'disabled' : ''} class="w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center transition ${isLast ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">⬇</button>
+                            <button onclick="moveWatchlistModal(${idx}, -1)" ${isFirst ? 'disabled' : ''} class="w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center ${isFirst ? 'bg-slate-100 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">⬆</button>
+                            <button onclick="moveWatchlistModal(${idx}, 1)" ${isLast ? 'disabled' : ''} class="w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center ${isLast ? 'bg-slate-100 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">⬇</button>
                         </div>
                     </div>
                 `;
@@ -563,16 +523,9 @@
             try {
                 const { data: { session }, error } = await _supabase.auth.getSession();
                 if (error) throw error;
-                if (session) {
-                    currentUser = session.user;
-                    await loadUserWatchlist();
-                    showApp(session.user);
-                } else {
-                    showLogin();
-                }
-            } catch (err) {
-                showLogin();
-            }
+                if (session) { currentUser = session.user; await loadUserWatchlist(); showApp(session.user); }
+                else showLogin();
+            } catch (err) { showLogin(); }
         }
 
         async function handleLogin(e) {
@@ -581,11 +534,8 @@
             const password = document.getElementById('password').value;
             const errEl = document.getElementById('login-error');
             const loginBtn = document.getElementById('login-btn');
-            
             errEl.classList.add('hidden');
-            errEl.textContent = '';
-            loginBtn.textContent = '登入中...';
-            loginBtn.disabled = true;
+            loginBtn.textContent = '登入中...'; loginBtn.disabled = true;
 
             try {
                 const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
@@ -600,15 +550,13 @@
                 errEl.textContent = "登入失敗：" + (err.message || "未知錯誤");
                 errEl.classList.remove('hidden');
             } finally {
-                loginBtn.textContent = '登入系統';
-                loginBtn.disabled = false;
+                loginBtn.textContent = '登入系統'; loginBtn.disabled = false;
             }
         }
 
         async function handleLogout() {
             await _supabase.auth.signOut();
-            currentUser = null;
-            watchlist = [];
+            currentUser = null; watchlist = [];
             document.getElementById('password').value = '';
             showLogin();
         }
@@ -625,16 +573,13 @@
         async function showApp(user) {
             currentUser = user;
             await loadUserWatchlist();
-
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
             document.getElementById('bottom-nav').classList.remove('hidden');
             document.getElementById('user-info').classList.remove('hidden');
             document.getElementById('user-email').textContent = user.email;
-            
             await loadStockDictionary();
             await loadTransactions();
-            
             fetchMarketData(true);
         }
 
@@ -646,7 +591,7 @@
             const symbol = document.getElementById('tx-symbol').value.trim().toUpperCase();
             const name = document.getElementById('tx-name').value.trim();
             const action = document.getElementById('tx-action').value;
-
+            const assetType = document.getElementById('tx-type').value;
             let shares = 0, price = 0, fee = 0, amount = 0;
 
             if (action === 'DIVIDEND') {
@@ -663,22 +608,14 @@
             const newTx = {
                 user_id: session.user.id,
                 date: document.getElementById('tx-date').value,
-                asset_type: document.getElementById('tx-type').value,
-                action: action,
-                symbol: symbol,
-                name: name,
-                shares: shares,
-                price: price,
-                fee: fee,
-                amount: amount,
+                asset_type: assetType,
+                action: action, symbol: symbol, name: name,
+                shares: shares, price: price, fee: fee, amount: amount,
                 note: document.getElementById('tx-note').value
             };
 
             const { error } = await _supabase.from('transactions').insert([newTx]);
-            if (error) {
-                alert('新增失敗：' + error.message);
-                return;
-            }
+            if (error) { alert('新增失敗：' + error.message); return; }
 
             if (symbol && name && !stockMap[symbol]) {
                 await _supabase.from('stocks').upsert([{ symbol: symbol, name: name }]);
@@ -687,17 +624,12 @@
 
             document.getElementById('transaction-form').reset();
             document.getElementById('tx-date').valueAsDate = new Date();
-            onActionChange();
-            onTypeChange();
+            onActionChange(); onTypeChange();
             loadTransactions();
             switchTab('summary');
         }
 
-        function toggleExpand(symbol) {
-            expandedSymbols[symbol] = !expandedSymbols[symbol];
-            renderSummary();
-        }
-
+        function toggleExpand(symbol) { expandedSymbols[symbol] = !expandedSymbols[symbol]; renderSummary(); }
         function toggleMarketExpand(symbol) {
             if (symbol === 'IX0001') return;
             expandedMarketSymbols[symbol] = !expandedMarketSymbols[symbol];
@@ -706,28 +638,25 @@
 
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
-            if (!isBackground) {
-                btn.disabled = true;
-                btn.textContent = '⏳ 更新即時資料中...';
-            }
+            if (!isBackground) { btn.disabled = true; btn.textContent = '⏳ 更新即時資料中...'; }
 
             await loadStockDictionary();
-
             const activeSymbols = getActiveSymbolsList();
             
             const allSymbolsToFetch = Array.from(new Set([
-                ...activeSymbols, 
-                ...watchlist, 
-                ...Object.keys(stockMap),
-                'IX0001', '0050', '0056', '00878', '00919', '2330'
+                ...activeSymbols, ...watchlist, ...Object.keys(stockMap),
+                'IX0001', '0050', '0056', '00878', '00919', '00888', '2330',
+                '00981A', '00980A', '00982A', '00984A', '00988A',
+                'A36004', 'A23015', 'A20012', 'A3Mp9ya'
             ]));
 
             await Promise.all(allSymbolsToFetch.map(async (sym) => {
                 try {
+                    const isFundSym = cachedTransactions.some(tx => tx.symbol === sym && tx.asset_type === 'fund') || (/[a-zA-Z]/.test(sym) && sym !== 'IX0001' && !/^[0-9]{4}[A-Z]$/.test(sym));
                     const { data, error } = await _supabase.functions.invoke('get-stock-price', {
-                        body: { symbol: sym }
+                        body: { symbol: sym, type: isFundSym ? 'fund' : 'stock' }
                     });
-                    if (!error && data && data.price > 0) {
+                    if (!error && data) {
                         marketDataCache[sym] = data;
                         if (data.name && data.name !== sym) {
                             stockMap[sym] = data.name;
@@ -735,7 +664,7 @@
                         }
                     }
                 } catch (err) {
-                    console.error(`取得 ${sym} 即時行情失敗:`, err);
+                    console.error(`取得 ${sym} 行情失敗:`, err);
                 }
             }));
 
@@ -744,10 +673,7 @@
 
             if (!isBackground) {
                 btn.textContent = '✅ 更新完成';
-                setTimeout(() => {
-                    btn.textContent = '🔄 更新行情';
-                    btn.disabled = false;
-                }, 1500);
+                setTimeout(() => { btn.textContent = '🔄 更新行情'; btn.disabled = false; }, 1500);
             }
         }
 
@@ -758,62 +684,31 @@
                 if (!portfolio[key]) portfolio[key] = { shares: 0, totalCost: 0 };
                 const shares = Number(tx.shares) || 0;
                 const amount = Number(tx.amount) || 0;
-                if (tx.action === 'BUY') {
-                    portfolio[key].shares += shares;
-                    portfolio[key].totalCost += amount;
-                } else if (tx.action === 'SELL') {
-                    portfolio[key].shares -= shares;
-                    portfolio[key].totalCost -= amount;
-                }
+                if (tx.action === 'BUY') { portfolio[key].shares += shares; portfolio[key].totalCost += amount; }
+                else if (tx.action === 'SELL') { portfolio[key].shares -= shares; portfolio[key].totalCost -= amount; }
             });
             return Object.keys(portfolio).filter(k => portfolio[k].shares > 0 || portfolio[k].totalCost > 0);
         }
 
         function renderSummary() {
             const portfolio = {};
-            let totalInvestedAll = 0;
-            let totalMarketValueAll = 0;
-            let totalDividendAll = 0;
+            let totalInvestedAll = 0, totalMarketValueAll = 0, totalDividendAll = 0;
 
             cachedTransactions.forEach(tx => {
                 const key = tx.symbol;
                 if (!portfolio[key]) {
-                    portfolio[key] = {
-                        symbol: tx.symbol,
-                        name: tx.name,
-                        asset_type: tx.asset_type,
-                        shares: 0,
-                        totalCost: 0,
-                        dividends: 0,
-                        txs: []
-                    };
+                    portfolio[key] = { symbol: tx.symbol, name: tx.name, asset_type: tx.asset_type, shares: 0, totalCost: 0, dividends: 0, txs: [] };
                 }
-
                 portfolio[key].txs.push(tx);
-
-                const shares = Number(tx.shares) || 0;
-                const amount = Number(tx.amount) || 0;
-
-                if (tx.action === 'BUY') {
-                    portfolio[key].shares += shares;
-                    portfolio[key].totalCost += amount;
-                    totalInvestedAll += amount;
-                } else if (tx.action === 'SELL') {
-                    portfolio[key].shares -= shares;
-                    portfolio[key].totalCost -= amount;
-                    totalInvestedAll -= amount;
-                } else if (tx.action === 'DIVIDEND') {
-                    portfolio[key].dividends += amount;
-                    totalDividendAll += amount;
-                }
+                const shares = Number(tx.shares) || 0, amount = Number(tx.amount) || 0;
+                if (tx.action === 'BUY') { portfolio[key].shares += shares; portfolio[key].totalCost += amount; totalInvestedAll += amount; }
+                else if (tx.action === 'SELL') { portfolio[key].shares -= shares; portfolio[key].totalCost -= amount; totalInvestedAll -= amount; }
+                else if (tx.action === 'DIVIDEND') { portfolio[key].dividends += amount; totalDividendAll += amount; }
             });
 
             const activeSymbols = Object.values(portfolio).filter(p => p.shares > 0 || p.totalCost > 0 || p.dividends > 0);
-
             activeSymbols.forEach(item => {
-                const livePrice = marketDataCache[item.symbol] && marketDataCache[item.symbol].price > 0 
-                    ? marketDataCache[item.symbol].price 
-                    : (item.shares > 0 ? item.totalCost / item.shares : 0);
+                const livePrice = marketDataCache[item.symbol] && marketDataCache[item.symbol].price > 0 ? marketDataCache[item.symbol].price : (item.shares > 0 ? item.totalCost / item.shares : 0);
                 item.marketValue = item.shares * livePrice;
                 totalMarketValueAll += item.marketValue;
             });
@@ -842,39 +737,25 @@
             listEl.innerHTML = activeSymbols.map(item => {
                 const avgPrice = item.shares > 0 ? (item.totalCost / item.shares).toFixed(2) : 0;
                 const isExpanded = !!expandedSymbols[item.symbol];
-
-                const livePrice = marketDataCache[item.symbol] && marketDataCache[item.symbol].price > 0 
-                    ? marketDataCache[item.symbol].price 
-                    : (item.shares > 0 ? Number(avgPrice) : 0);
+                const livePrice = marketDataCache[item.symbol] && marketDataCache[item.symbol].price > 0 ? marketDataCache[item.symbol].price : (item.shares > 0 ? Number(avgPrice) : 0);
                 const marketVal = item.shares * livePrice;
                 const profitAmt = marketVal - item.totalCost;
                 const profitPct = item.totalCost > 0 ? ((profitAmt / item.totalCost) * 100).toFixed(2) : 0;
-
                 const profitColor = profitAmt >= 0 ? 'text-emerald-600' : 'text-rose-600';
                 const profitSign = profitAmt >= 0 ? '+' : '';
-
                 const displayName = stockMap[item.symbol] || item.name || item.symbol;
 
                 const subTxsHtml = item.txs.map(tx => {
-                    let badge = '';
-                    if (tx.action === 'BUY') badge = '<span class="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">買進</span>';
-                    else if (tx.action === 'SELL') badge = '<span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">賣出</span>';
-                    else badge = '<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">配息</span>';
-
+                    let badge = tx.action === 'BUY' ? '<span class="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px]">買進</span>' : (tx.action === 'SELL' ? '<span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px]">賣出</span>' : '<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px]">配息</span>');
                     return `
                         <div class="bg-morandi-50/70 p-2.5 rounded-xl border border-morandi-100 flex justify-between items-center text-[11px]">
                             <div>
-                                <div class="flex items-center gap-1.5 mb-0.5">
-                                    <span class="text-slate-400 whitespace-nowrap">${tx.date}</span>
-                                    ${badge}
-                                </div>
+                                <div class="flex items-center gap-1.5 mb-0.5"><span class="text-slate-400">${tx.date}</span>${badge}</div>
                                 <span class="text-slate-600">${tx.action === 'DIVIDEND' ? '配息入帳 (單位數: ' + tx.shares + ' | 每單位: ' + tx.price + ')' : '單位數: ' + tx.shares + ' | 淨值: ' + tx.price}</span>
-                                ${tx.note ? '<span class="text-slate-400 ml-1">(' + tx.note + ')</span>' : ''}
                             </div>
                             <div class="text-right">
-                                <span class="font-bold text-slate-800">NT$ ${Number(tx.amount).toLocaleString()}</span>
-                                <br>
-                                <button onclick="event.stopPropagation(); deleteTx(${tx.id})" class="text-rose-500 hover:text-rose-700 text-[10px] underline mt-0.5">刪除</button>
+                                <span class="font-bold text-slate-800">NT$ ${Number(tx.amount).toLocaleString()}</span><br>
+                                <button onclick="event.stopPropagation(); deleteTx(${tx.id})" class="text-rose-500 text-[10px] underline">刪除</button>
                             </div>
                         </div>
                     `;
@@ -884,43 +765,23 @@
                     <div onclick="toggleExpand('${item.symbol}')" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-3 cursor-pointer hover:border-morandi-300 transition">
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-1.5 min-w-0">
-                                <span class="font-bold text-sm text-slate-800 tracking-wide whitespace-nowrap">${item.symbol}</span>
+                                <span class="font-bold text-sm text-slate-800">${item.symbol}</span>
                                 <span class="text-xs text-slate-500 truncate">${displayName}</span>
-                                <span class="text-[10px] text-morandi-600 bg-morandi-100/80 px-2 py-0.5 rounded-md font-medium whitespace-nowrap">${isExpanded ? '▲ 收合' : '▼ 明細'}</span>
+                                <span class="text-[10px] text-morandi-600 bg-morandi-100 px-2 py-0.5 rounded-md">${isExpanded ? '▲ 收合' : '▼ 明細'}</span>
                             </div>
-                            <span class="text-[10px] px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap ${item.asset_type === 'stock' ? 'bg-morandi-100 text-morandi-800' : 'bg-purple-50 text-purple-700'}">${item.asset_type === 'stock' ? '股票/ETF' : '基金'}</span>
+                            <span class="text-[10px] px-2.5 py-0.5 rounded-full font-medium ${item.asset_type === 'stock' ? 'bg-morandi-100 text-morandi-800' : 'bg-purple-50 text-purple-700'}">${item.asset_type === 'stock' ? '股票/ETF' : '基金'}</span>
                         </div>
-                        
-                        <div class="grid grid-cols-2 pt-2 border-t border-slate-100/80 text-[11px] gap-y-1.5">
-                            <div>
-                                <span class="text-slate-400">持有單位：</span><b class="text-morandi-700">${item.shares.toLocaleString()}</b>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-slate-400">平均成本：</span><b>${Number(avgPrice).toLocaleString()}</b>
-                            </div>
-                            <div>
-                                <span class="text-slate-400">投入淨額：</span><b>NT$ ${Math.round(item.totalCost).toLocaleString()}</b>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-slate-400">累積配息：</span><b class="text-amber-700">NT$ ${Math.round(item.dividends).toLocaleString()}</b>
-                            </div>
+                        <div class="grid grid-cols-2 pt-2 border-t border-slate-100 text-[11px] gap-y-1.5">
+                            <div><span class="text-slate-400">持有單位：</span><b class="text-morandi-700">${item.shares.toLocaleString()}</b></div>
+                            <div class="text-right"><span class="text-slate-400">平均成本：</span><b>${Number(avgPrice).toLocaleString()}</b></div>
+                            <div><span class="text-slate-400">投入淨額：</span><b>NT$ ${Math.round(item.totalCost).toLocaleString()}</b></div>
+                            <div class="text-right"><span class="text-slate-400">累積配息：</span><b class="text-amber-700">NT$ ${Math.round(item.dividends).toLocaleString()}</b></div>
                         </div>
-
-                        <div class="grid grid-cols-2 text-[11px] pt-2 border-t border-slate-100/80">
-                            <div>
-                                <span class="text-slate-400">現值市值：</span><b>NT$ ${Math.round(marketVal).toLocaleString()}</b>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-slate-400">未實現損益：</span><b class="${profitColor}">${profitSign}NT$ ${Math.round(Math.abs(profitAmt)).toLocaleString()} (${profitSign}${profitPct}%)</b>
-                            </div>
+                        <div class="grid grid-cols-2 text-[11px] pt-2 border-t border-slate-100">
+                            <div><span class="text-slate-400">現值市值：</span><b>NT$ ${Math.round(marketVal).toLocaleString()}</b></div>
+                            <div class="text-right"><span class="text-slate-400">未實現損益：</span><b class="${profitColor}">${profitSign}NT$ ${Math.round(Math.abs(profitAmt)).toLocaleString()} (${profitSign}${profitPct}%)</b></div>
                         </div>
-
-                        ${isExpanded ? `
-                            <div class="pt-3 mt-1 border-t border-slate-100 space-y-2 cursor-default" onclick="event.stopPropagation()">
-                                <p class="text-[11px] font-bold text-morandi-700 mb-1">📦 分批投入與配息明細：</p>
-                                ${subTxsHtml}
-                            </div>
-                        ` : ''}
+                        ${isExpanded ? `<div class="pt-3 mt-1 border-t border-slate-100 space-y-2" onclick="event.stopPropagation()">${subTxsHtml}</div>` : ''}
                     </div>
                 `;
             }).join('');
@@ -929,8 +790,8 @@
         function renderMarketList() {
             const listEl = document.getElementById('market-list');
             const searchKeyword = (document.getElementById('market-search-input').value || '').trim().toLowerCase();
-            
             const activeSymbols = getActiveSymbolsList();
+            
             const allSymbolsMap = {};
             activeSymbols.forEach(s => allSymbolsMap[s] = stockMap[s] || s);
             Object.keys(stockMap).forEach(s => allSymbolsMap[s] = stockMap[s]);
@@ -938,22 +799,30 @@
             Object.keys(marketDataCache).forEach(s => { if(!allSymbolsMap[s]) allSymbolsMap[s] = stockMap[s] || s; });
 
             let targetSymbols = [];
-            if (marketSubTab === 'watchlist') {
+
+            // 💡 根據 activeMarketTab (watchlist, stock, fund) 進行過濾
+            if (activeMarketTab === 'watchlist') {
                 targetSymbols = watchlist;
-            } else {
-                targetSymbols = Object.keys(allSymbolsMap);
+            } else if (activeMarketTab === 'fund') {
+                targetSymbols = Object.keys(allSymbolsMap).filter(sym => {
+                    return cachedTransactions.some(tx => tx.symbol === sym && tx.asset_type === 'fund') || (/[a-zA-Z]/.test(sym) && sym !== 'IX0001' && !/^[0-9]{4}[A-Z]$/.test(sym));
+                });
+            } else { // 'stock'
+                targetSymbols = Object.keys(allSymbolsMap).filter(sym => {
+                    const isFundSym = cachedTransactions.some(tx => tx.symbol === sym && tx.asset_type === 'fund') || (/[a-zA-Z]/.test(sym) && sym !== 'IX0001' && !/^[0-9]{4}[A-Z]$/.test(sym));
+                    return !isFundSym;
+                });
             }
 
             if (searchKeyword !== '') {
                 targetSymbols = targetSymbols.filter(sym => {
                     const name = (stockMap[sym] || '').toLowerCase();
-                    const s = sym.toLowerCase();
-                    return s.includes(searchKeyword) || name.includes(searchKeyword);
+                    return sym.toLowerCase().includes(searchKeyword) || name.includes(searchKeyword);
                 });
             }
 
             if (targetSymbols.length === 0) {
-                listEl.innerHTML = `<div class="bg-white p-6 rounded-2xl text-center text-slate-400 text-xs shadow-sm border border-slate-100">找不到符合條件的標的</div>`;
+                listEl.innerHTML = `<div class="bg-white p-6 rounded-2xl text-center text-slate-400 text-xs shadow-sm border border-slate-100">目前類別中尚無標的</div>`;
                 return;
             }
 
@@ -962,14 +831,16 @@
                 const stockName = stockMap[sym] || (info && info.name ? info.name : sym);
                 const price = info && info.price > 0 ? info.price : '--';
                 const isStarred = watchlist.includes(sym);
-                const isFund = /[a-zA-Z]/.test(sym) && sym !== 'IX0001';
+                
+                // 動態判斷是否為共同基金
+                const isFund = cachedTransactions.some(tx => tx.symbol === sym && tx.asset_type === 'fund') || (/[a-zA-Z]/.test(sym) && sym !== 'IX0001' && !/^[0-9]{4}[A-Z]$/.test(sym));
 
                 let detailsHtml = '';
                 if (sym === 'IX0001') {
                     detailsHtml = `
-                        <div class="pt-2 border-t border-slate-100/80 flex justify-between items-center text-[11px] text-morandi-700 bg-morandi-50 px-3 py-2 rounded-xl">
-                            <span>📊 台灣證交所大盤加權指數</span>
-                            <span class="font-bold">現價: ${price}</span>
+                        <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-[11px] text-morandi-700 bg-morandi-50 px-3 py-2 rounded-xl">
+                            <span>📊 台股加權指數 (TWII)</span>
+                            <span class="font-bold">指數: ${price}</span>
                         </div>
                     `;
                 } else if (isFund) {
@@ -978,23 +849,18 @@
                     if (info && info.history && info.history.length > 0) {
                         innerContent = info.history.map((h) => `
                             <div class="flex justify-between items-center bg-purple-50/60 px-3 py-2 rounded-xl text-[11px]">
-                                <span class="text-slate-500 font-medium">${h.date}</span>
+                                <span class="text-slate-500">${h.date}</span>
                                 <span class="text-purple-800 font-bold">單位淨值: ${h.close}</span>
                             </div>
                         `).join('');
                     }
 
                     detailsHtml = `
-                        <div class="pt-2 border-t border-slate-100/80 flex justify-between items-center text-[11px] text-purple-700 bg-purple-50/50 px-3 py-2 rounded-xl">
+                        <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-[11px] text-purple-700 bg-purple-50/50 px-3 py-2 rounded-xl">
                             <span>💡 共同基金（鉅亨網自動淨值同步）</span>
                             <span class="font-bold">最新淨值: ${price}</span>
                         </div>
-                        ${isExpanded ? `
-                            <div class="pt-2 mt-1 border-t border-purple-100 space-y-1.5 cursor-default" onclick="event.stopPropagation()">
-                                <p class="text-[11px] font-bold text-purple-800 mb-1">📅 近期單位淨值走勢：</p>
-                                ${innerContent}
-                            </div>
-                        ` : ''}
+                        ${isExpanded ? `<div class="pt-2 mt-1 border-t border-purple-100 space-y-1.5" onclick="event.stopPropagation()">${innerContent}</div>` : ''}
                     `;
                 } else {
                     const ma5 = info ? info.ma5 : '--';
@@ -1002,76 +868,30 @@
                     const ma20 = info ? info.ma20 : '--';
                     const ma60 = info ? info.ma60 : '--';
                     const isExpanded = !!expandedMarketSymbols[sym];
-                    
-                    let innerContent = `<p class="text-[11px] text-slate-400 text-center py-2">尚未載入近五日收盤明細，請點擊上方「更新行情」</p>`;
-                    if (info && info.history && info.history.length > 0) {
-                        innerContent = info.history.map((h, hIdx, arr) => {
-                            let changeSign = '';
-                            let changeColor = 'text-slate-600';
-                            if (hIdx > 0) {
-                                const prevClose = arr[hIdx - 1].close;
-                                const diff = h.close - prevClose;
-                                const pct = ((diff / prevClose) * 100).toFixed(2);
-                                changeSign = diff >= 0 ? `+${diff.toFixed(2)} (+${pct}%)` : `${diff.toFixed(2)} (${pct}%)`;
-                                changeColor = diff >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold';
-                            } else {
-                                changeSign = '基準日';
-                            }
-
-                            return `
-                                <div class="grid grid-cols-3 items-center bg-morandi-50/70 px-3 py-2 rounded-xl text-[11px]">
-                                    <span class="text-slate-500 font-medium">${h.date}</span>
-                                    <span class="text-slate-800 text-center">收盤: <b>${h.close}</b></span>
-                                    <span class="${changeColor} text-right">${changeSign}</span>
-                                </div>
-                            `;
-                        }).join('');
-                    }
 
                     detailsHtml = `
-                        <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-100/80 text-center text-xs">
-                            <div class="bg-slate-50 p-2 rounded-2xl">
-                                <span class="text-[10px] text-slate-400 block">5日線</span>
-                                <b class="text-slate-700">${ma5}</b>
-                            </div>
-                            <div class="bg-slate-50 p-2 rounded-2xl">
-                                <span class="text-[10px] text-slate-400 block">10日線</span>
-                                <b class="text-slate-700">${ma10}</b>
-                            </div>
-                            <div class="bg-slate-50 p-2 rounded-2xl">
-                                <span class="text-[10px] text-slate-400 block">20日線</span>
-                                <b class="text-slate-700">${ma20}</b>
-                            </div>
-                            <div class="bg-slate-50 p-2 rounded-2xl">
-                                <span class="text-[10px] text-slate-400 block">60日線</span>
-                                <b class="text-slate-700">${ma60}</b>
-                            </div>
+                        <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-100 text-center text-xs">
+                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">5日線</span><b class="text-slate-700">${ma5}</b></div>
+                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">10日線</span><b class="text-slate-700">${ma10}</b></div>
+                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">20日線</span><b class="text-slate-700">${ma20}</b></div>
+                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">60日線</span><b class="text-slate-700">${ma60}</b></div>
                         </div>
-                        ${isExpanded ? `
-                            <div class="pt-3 mt-1 border-t border-slate-100 space-y-1.5 cursor-default" onclick="event.stopPropagation()">
-                                <p class="text-[11px] font-bold text-morandi-700 mb-1">📅 近五日開盤收盤與漲幅走勢：</p>
-                                ${innerContent}
-                            </div>
-                        ` : ''}
                     `;
                 }
 
-                let expandLabel = (sym !== 'IX0001') ? `<span class="text-[10px] ${isFund ? 'text-purple-600 bg-purple-100/80' : 'text-morandi-600 bg-morandi-100/80'} px-2 py-0.5 rounded-md font-medium whitespace-nowrap">${!!expandedMarketSymbols[sym] ? '▲ 收合' : '▼ 明細'}</span>` : '';
+                let expandLabel = sym !== 'IX0001' ? `<span class="text-[10px] ${isFund ? 'text-purple-600 bg-purple-100' : 'text-morandi-600 bg-morandi-100'} px-2 py-0.5 rounded-md">${!!expandedMarketSymbols[sym] ? '▲ 收合' : '▼ 明細'}</span>` : '';
 
                 return `
                     <div onclick="toggleMarketExpand('${sym}')" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-3 cursor-pointer hover:border-morandi-300 transition">
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-1.5 min-w-0">
-                                <button onclick="event.stopPropagation(); toggleWatchlist('${sym}')" class="text-lg focus:outline-none" title="加入/移除追蹤">
-                                    ${isStarred ? '⭐' : '☆'}
-                                </button>
-                                <span class="font-bold text-sm text-slate-800 tracking-wide whitespace-nowrap">${sym}</span>
+                                <button onclick="event.stopPropagation(); toggleWatchlist('${sym}')" class="text-lg">${isStarred ? '⭐' : '☆'}</button>
+                                <span class="font-bold text-sm text-slate-800">${sym}</span>
                                 <span class="text-xs text-slate-500 truncate">${stockName}</span>
                                 ${expandLabel}
                             </div>
-                            <span class="text-xs font-bold ${isFund ? 'text-purple-700 bg-purple-100/70 border-purple-200/50' : 'text-morandi-800 bg-morandi-100/70 border-morandi-200/50'} px-2.5 py-1 rounded-xl border whitespace-nowrap">${isFund ? '淨值' : '現價'}: ${price}</span>
+                            <span class="text-xs font-bold ${isFund ? 'text-purple-700 bg-purple-100 border-purple-200' : 'text-morandi-800 bg-morandi-100 border-morandi-200'} px-2.5 py-1 rounded-xl border">${isFund ? '淨值' : '現價'}: ${price}</span>
                         </div>
-
                         ${detailsHtml}
                     </div>
                 `;
@@ -1080,40 +900,20 @@
 
         function renderHistoryList() {
             const listEl = document.getElementById('transaction-list');
-            if (cachedTransactions.length === 0) {
-                listEl.innerHTML = `<div class="text-center text-slate-400 text-xs py-4">目前尚無任何交易明細</div>`;
-                return;
-            }
-
+            if (cachedTransactions.length === 0) { listEl.innerHTML = `<div class="text-center text-slate-400 text-xs py-4">目前尚無任何交易明細</div>`; return; }
             listEl.innerHTML = cachedTransactions.map(tx => {
-                let badge = '';
-                if (tx.action === 'BUY') badge = '<span class="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">買進</span>';
-                else if (tx.action === 'SELL') badge = '<span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">賣出</span>';
-                else badge = '<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">配息</span>';
-
+                let badge = tx.action === 'BUY' ? '<span class="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px]">買進</span>' : (tx.action === 'SELL' ? '<span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px]">賣出</span>' : '<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px]">配息</span>');
                 const displayName = stockMap[tx.symbol] || tx.name || tx.symbol;
-
                 return `
-                    <div class="bg-slate-50/90 p-4 rounded-2xl border border-slate-100 space-y-2 shadow-sm">
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
                         <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-slate-400 font-mono tracking-wide">${tx.date}</span>
-                                ${badge}
-                            </div>
-                            <span class="font-bold text-slate-900 text-base tracking-tight">NT$ ${Number(tx.amount).toLocaleString()}</span>
+                            <div class="flex items-center gap-2"><span class="text-xs text-slate-400">${tx.date}</span>${badge}</div>
+                            <span class="font-bold text-slate-900">NT$ ${Number(tx.amount).toLocaleString()}</span>
                         </div>
-
-                        <div class="text-sm font-bold text-slate-800 pt-0.5">
-                            <span class="font-mono mr-1">${tx.symbol}</span>
-                            <span class="text-slate-700">${displayName}</span>
-                        </div>
-
-                        <div class="flex justify-between items-end pt-1 border-t border-slate-200/60 text-xs text-slate-500">
-                            <div>
-                                <p class="text-[11px]">${tx.action === 'DIVIDEND' ? '配息入帳 (單位數: ' + tx.shares + ' | 每單位: ' + tx.price + ')' : '單位數: ' + tx.shares + ' | 淨值: ' + tx.price}</p>
-                                ${tx.note ? '<p class="text-slate-400 text-[10px] mt-0.5">備註: ' + tx.note + '</p>' : ''}
-                            </div>
-                            <button onclick="deleteTx(${tx.id})" class="text-rose-500 hover:text-rose-700 text-[11px] font-medium underline flex-shrink-0 ml-2">刪除</button>
+                        <div class="text-sm font-bold text-slate-800"><span class="font-mono mr-1">${tx.symbol}</span><span>${displayName}</span></div>
+                        <div class="flex justify-between items-end pt-1 border-t border-slate-200 text-xs text-slate-500">
+                            <div><p>${tx.action === 'DIVIDEND' ? '配息入帳 (單位數: ' + tx.shares + ' | 每單位: ' + tx.price + ')' : '單位數: ' + tx.shares + ' | 淨值: ' + tx.price}</p></div>
+                            <button onclick="deleteTx(${tx.id})" class="text-rose-500 underline">刪除</button>
                         </div>
                     </div>
                 `;
@@ -1122,28 +922,18 @@
 
         async function loadTransactions() {
             try {
-                const { data, error } = await _supabase
-                    .from('transactions')
-                    .select('*')
-                    .order('date', { ascending: false });
-
+                const { data, error } = await _supabase.from('transactions').select('*').order('date', { ascending: false });
                 if (error) throw error;
                 cachedTransactions = data || [];
-                renderSummary();
-                renderHistoryList();
-            } catch (err) {
-                console.error("載入交易紀錄失敗:", err);
-            }
+                renderSummary(); renderHistoryList();
+            } catch (err) { console.error("載入交易紀錄失敗:", err); }
         }
 
         async function deleteTx(id) {
             if (!confirm('確定要刪除這筆紀錄嗎？')) return;
             const { error } = await _supabase.from('transactions').delete().eq('id', id);
-            if (error) {
-                alert('刪除失敗：' + error.message);
-            } else {
-                loadTransactions();
-            }
+            if (error) alert('刪除失敗：' + error.message);
+            else loadTransactions();
         }
 
         checkUser();
