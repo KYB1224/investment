@@ -616,7 +616,7 @@
             await loadStockDictionary();
             await loadTransactions();
             
-            // 🚀 登入後自動在背景觸發一次行情更新，確保一進來就有最新即時資料
+            // 🚀 登入後自動在背景觸發一次完整行情更新
             fetchMarketData(true);
         }
 
@@ -685,7 +685,7 @@
             renderMarketList();
         }
 
-        // 🚀 最佳化平行非同步批次抓取行情（兼顧即時性與速度）
+        // 🚀 完整修復：平行非同步抓取「持股、追蹤、以及資料庫所有股票字典」確保切到全部標的時都有數值
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
             if (!isBackground) {
@@ -696,14 +696,15 @@
             await loadStockDictionary();
 
             const activeSymbols = getActiveSymbolsList();
-            // 結合持股與追蹤清單，避免整張股票字典幾百檔全部無腦抓取，大幅提升即時更新效率
-            const targetSymbolsToFetch = Array.from(new Set([...activeSymbols, ...watchlist]));
-            if (targetSymbolsToFetch.length === 0) {
-                targetSymbolsToFetch.push('2330'); // 預設至少抓一檔台積電
-            }
+            const allSymbolsToFetch = Array.from(new Set([
+                ...activeSymbols, 
+                ...watchlist, 
+                ...Object.keys(stockMap),
+                'IX0001', '0050', '0056', '00878', '00919', '2330'
+            ]));
 
-            // 平行同時發送請求（Promise.all），加速抓取
-            await Promise.all(targetSymbolsToFetch.map(async (sym) => {
+            // 同時平行發送請求（Promise.all），確保所有標的皆能即時取得最新行情
+            await Promise.all(allSymbolsToFetch.map(async (sym) => {
                 try {
                     const { data, error } = await _supabase.functions.invoke('get-stock-price', {
                         body: { symbol: sym }
@@ -728,7 +729,7 @@
                 setTimeout(() => {
                     btn.textContent = '🔄 更新行情';
                     btn.disabled = false;
-                }, 1200);
+                }, 1500);
             }
         }
 
