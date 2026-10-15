@@ -470,6 +470,15 @@
             renderMarketList();
         }
 
+        async function moveWatchlist(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= watchlist.length) return;
+            const item = watchlist.splice(index, 1)[0];
+            watchlist.splice(newIndex, 0, item);
+            await saveUserWatchlist();
+            renderMarketList();
+        }
+
         async function checkUser() {
             try {
                 const { data: { session }, error } = await _supabase.auth.getSession();
@@ -854,7 +863,7 @@
                 return;
             }
 
-            listEl.innerHTML = targetSymbols.map(sym => {
+            listEl.innerHTML = targetSymbols.map((sym, idx) => {
                 const info = marketDataCache[sym];
                 const stockName = stockMap[sym] || (info && info.name ? info.name : sym);
                 const price = info ? info.price : '--';
@@ -865,13 +874,24 @@
                 const isStarred = watchlist.includes(sym);
                 const isExpanded = !!expandedMarketSymbols[sym];
 
+                let moveControls = '';
+                if (marketSubTab === 'watchlist') {
+                    moveControls = `
+                        <div class="flex items-center gap-1 bg-morandi-50 px-2 py-1 rounded-xl border border-morandi-100" onclick="event.stopPropagation()">
+                            <span class="text-[10px] text-slate-400 mr-1">排序</span>
+                            <button onclick="moveWatchlist(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="text-xs bg-white px-1.5 py-0.5 rounded shadow-sm text-morandi-700 font-bold">⬆</button>
+                            <button onclick="moveWatchlist(${idx}, 1)" ${idx === watchlist.length - 1 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="text-xs bg-white px-1.5 py-0.5 rounded shadow-sm text-morandi-700 font-bold">⬇</button>
+                        </div>
+                    `;
+                }
+
                 let fiveDaysHtml = `<p class="text-[11px] text-slate-400 text-center py-2">尚未載入近五日收盤明細，請點擊上方「更新行情」</p>`;
                 if (info && info.history && info.history.length > 0) {
-                    fiveDaysHtml = info.history.map((h, idx, arr) => {
+                    fiveDaysHtml = info.history.map((h, hIdx, arr) => {
                         let changeSign = '';
                         let changeColor = 'text-slate-600';
-                        if (idx > 0) {
-                            const prevClose = arr[idx - 1].close;
+                        if (hIdx > 0) {
+                            const prevClose = arr[hIdx - 1].close;
                             const diff = h.close - prevClose;
                             const pct = ((diff / prevClose) * 100).toFixed(2);
                             changeSign = diff >= 0 ? `+${diff.toFixed(2)} (+${pct}%)` : `${diff.toFixed(2)} (${pct}%)`;
@@ -903,6 +923,13 @@
                             </div>
                             <span class="text-xs font-bold text-morandi-800 bg-morandi-100/70 px-2.5 py-1 rounded-xl border border-morandi-200/50 whitespace-nowrap">現價: ${price}</span>
                         </div>
+
+                        ${marketSubTab === 'watchlist' ? `
+                            <div class="flex justify-between items-center pt-1">
+                                <span class="text-[10px] text-slate-400">編號: ${sym}</span>${moveControls}
+                            </div>
+                        ` : ''}
+
                         <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-100/80 text-center text-xs">
                             <div class="bg-slate-50 p-2 rounded-2xl">
                                 <span class="text-[10px] text-slate-400 block">5日線</span>
