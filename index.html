@@ -59,7 +59,7 @@
 </head>
 <body class="bg-morandi-50 text-slate-700 min-h-screen flex flex-col pb-28 select-none font-sans antialiased">
 
-    <!-- 頂部標題列 (留高避開動態島/時間) -->
+    <!-- 頂部標題列 -->
     <header class="bg-morandi-100/95 backdrop-blur-md text-morandi-800 border-b border-morandi-200/60 sticky top-0 z-50 pt-10 pb-3 transition-colors duration-300 shadow-sm">
         <div class="max-w-md mx-auto px-5 flex justify-between items-center">
             <h1 class="text-sm tracking-wide font-bold flex items-center gap-2 text-morandi-800">
@@ -250,7 +250,7 @@
 
     </main>
 
-    <!-- 底部固定導航列 (加高 pb-6 避開底部 Home Indicator 黑條) -->
+    <!-- 底部固定導航列 -->
     <nav id="bottom-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-lg z-50 pt-2.5 pb-6 px-4">
         <div class="max-w-md mx-auto flex justify-around items-center">
             <button onclick="switchTab('summary')" id="tab-summary" class="flex flex-col items-center text-morandi-600 font-bold text-[10px] transition">
@@ -303,16 +303,29 @@
         let currentUser = null;
         let watchlist = [];
 
-        function loadUserWatchlist() {
+        async function loadUserWatchlist() {
             if (!currentUser) return;
-            const key = `my_watchlist_${currentUser.id}`;
-            watchlist = JSON.parse(localStorage.getItem(key) || '["2330", "00891", "2317", "2454"]');
+            try {
+                const { data: { user }, error } = await _supabase.auth.getUser();
+                if (!error && user && user.user_metadata && user.user_metadata.watchlist) {
+                    watchlist = user.user_metadata.watchlist;
+                } else {
+                    watchlist = []; // 預設完全空白
+                }
+            } catch (err) {
+                watchlist = [];
+            }
         }
 
-        function saveUserWatchlist() {
+        async function saveUserWatchlist() {
             if (!currentUser) return;
-            const key = `my_watchlist_${currentUser.id}`;
-            localStorage.setItem(key, JSON.stringify(watchlist));
+            try {
+                await _supabase.auth.updateUser({
+                    data: { watchlist: watchlist }
+                });
+            } catch (err) {
+                console.error("儲存追蹤清單至雲端失敗:", err);
+            }
         }
 
         function showEmailHistoryDropdown() {
@@ -452,14 +465,14 @@
             renderMarketList();
         }
 
-        function toggleWatchlist(sym) {
+        async function toggleWatchlist(sym) {
             const index = watchlist.indexOf(sym);
             if (index > -1) {
                 watchlist.splice(index, 1);
             } else {
                 watchlist.push(sym);
             }
-            saveUserWatchlist();
+            await saveUserWatchlist();
             renderMarketList();
         }
 
@@ -469,7 +482,7 @@
                 if (error) throw error;
                 if (session) {
                     currentUser = session.user;
-                    loadUserWatchlist();
+                    await loadUserWatchlist();
                     showApp(session.user);
                 } else {
                     showLogin();
@@ -497,7 +510,7 @@
                 if (data && data.session) {
                     saveEmailToLocalStorage(email);
                     currentUser = data.session.user;
-                    loadUserWatchlist();
+                    await loadUserWatchlist();
                     showApp(data.session.user);
                 }
             } catch (err) {
@@ -528,7 +541,7 @@
 
         async function showApp(user) {
             currentUser = user;
-            loadUserWatchlist();
+            await loadUserWatchlist();
 
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
