@@ -305,7 +305,7 @@
 
         let stockMap = {};
         let nameMap = {};
-        let stockTypeMap = {}; // 💡 儲存從 stocks 表格讀取到的資產類型
+        let stockTypeMap = {};
         let cachedTransactions = [];
         let expandedSymbols = {};
         let expandedMarketSymbols = {};
@@ -378,7 +378,7 @@
                     data.forEach(item => {
                         stockMap[item.symbol] = item.name;
                         nameMap[item.name] = item.symbol;
-                        stockTypeMap[item.symbol] = item.asset_type || 'stock'; // 預設為 stock
+                        stockTypeMap[item.symbol] = item.asset_type || 'stock';
                     });
                 }
             } catch (err) {
@@ -633,7 +633,6 @@
 
         function toggleExpand(symbol) { expandedSymbols[symbol] = !expandedSymbols[symbol]; renderSummary(); }
         function toggleMarketExpand(symbol) {
-            if (symbol === 'IX0001') return;
             expandedMarketSymbols[symbol] = !expandedMarketSymbols[symbol];
             renderMarketList();
         }
@@ -644,12 +643,12 @@
             if (stockTypeMap[sym]) {
                 return stockTypeMap[sym] === 'fund';
             }
-            // 若字典裡沒有，退回檢查交易紀錄
             const txMatch = cachedTransactions.find(tx => tx.symbol === sym);
             if (txMatch) {
                 return txMatch.asset_type === 'fund';
             }
-            return false;
+            // 預設如果含有英文字母且非主動式ETF才判定為基金
+            return /^[a-zA-Z]/.test(sym) && !/^[0-9]{4}[A-Z]$/.test(sym);
         }
 
         async function fetchMarketData(isBackground = false) {
@@ -846,11 +845,42 @@
 
                 let detailsHtml = '';
                 if (sym === 'IX0001') {
+                    const isExpanded = !!expandedMarketSymbols[sym];
+                    let innerContent = `<p class="text-[11px] text-slate-400 text-center py-2">載入中或未取得加權指數明細...</p>`;
+                    if (info && info.history && info.history.length > 0) {
+                        innerContent = info.history.map((h, hIdx, arr) => {
+                            let changeSign = '';
+                            let changeColor = 'text-slate-600';
+                            if (hIdx > 0) {
+                                const prevClose = arr[hIdx - 1].close;
+                                const diff = h.close - prevClose;
+                                const pct = ((diff / prevClose) * 100).toFixed(2);
+                                changeSign = diff >= 0 ? `+${diff.toFixed(2)} (+${pct}%)` : `${diff.toFixed(2)} (${pct}%)`;
+                                changeColor = diff >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold';
+                            } else {
+                                changeSign = '基準日';
+                            }
+                            return `
+                                <div class="grid grid-cols-3 items-center bg-morandi-50/70 px-3 py-2 rounded-xl text-[11px]">
+                                    <span class="text-slate-500 font-medium">${h.date}</span>
+                                    <span class="text-slate-800 text-center">指數: <b>${h.close}</b></span>
+                                    <span class="${changeColor} text-right">${changeSign}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+
                     detailsHtml = `
                         <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-[11px] text-morandi-700 bg-morandi-50 px-3 py-2 rounded-xl">
                             <span>📊 台股加權指數 (TWII)</span>
                             <span class="font-bold">指數: ${price}</span>
                         </div>
+                        ${isExpanded ? `
+                            <div class="pt-3 mt-1 border-t border-slate-100 space-y-1.5 cursor-default" onclick="event.stopPropagation()">
+                                <p class="text-[11px] font-bold text-morandi-700 mb-1">📅 近五日加權指數走勢：</p>
+                                ${innerContent}
+                            </div>
+                        ` : ''}
                     `;
                 } else if (isFund) {
                     const isExpanded = !!expandedMarketSymbols[sym];
@@ -858,7 +888,7 @@
                     if (info && info.history && info.history.length > 0) {
                         innerContent = info.history.map((h) => `
                             <div class="flex justify-between items-center bg-purple-50/60 px-3 py-2 rounded-xl text-[11px]">
-                                <span class="text-slate-500">${h.date}</span>
+                                <span class="text-slate-500">${h.date || '近期'}</span>
                                 <span class="text-purple-800 font-bold">單位淨值: ${h.close}</span>
                             </div>
                         `).join('');
