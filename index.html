@@ -616,7 +616,7 @@
             await loadStockDictionary();
             await loadTransactions();
             
-            // 🚀 登入後自動在背景觸發一次完整行情更新
+            // 🚀 登入後自動背景更新所有標的
             fetchMarketData(true);
         }
 
@@ -685,7 +685,7 @@
             renderMarketList();
         }
 
-        // 🚀 完整修復：平行非同步抓取「持股、追蹤、以及資料庫所有股票字典」確保切到全部標的時都有數值
+        // 🚀 完全修復：強制完整抓取所有字典與清單的即時行情
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
             if (!isBackground) {
@@ -696,14 +696,16 @@
             await loadStockDictionary();
 
             const activeSymbols = getActiveSymbolsList();
+            
+            // 包含所有持股、追蹤清單、以及資料庫 stocks 表格裡的所有股票代號
             const allSymbolsToFetch = Array.from(new Set([
                 ...activeSymbols, 
                 ...watchlist, 
                 ...Object.keys(stockMap),
-                'IX0001', '0050', '0056', '00878', '00919', '2330'
+                'IX0001', '0050', '0056', '00878', '00919', '2330', '00891', '00918'
             ]));
 
-            // 同時平行發送請求（Promise.all），確保所有標的皆能即時取得最新行情
+            // 同時平行發送請求（Promise.all），確保「全部標的」分頁的所有項目都有即時數據
             await Promise.all(allSymbolsToFetch.map(async (sym) => {
                 try {
                     const { data, error } = await _supabase.functions.invoke('get-stock-price', {
@@ -913,6 +915,8 @@
             activeSymbols.forEach(s => allSymbolsMap[s] = stockMap[s] || s);
             Object.keys(stockMap).forEach(s => allSymbolsMap[s] = stockMap[s]);
             watchlist.forEach(s => { if(!allSymbolsMap[s]) allSymbolsMap[s] = stockMap[s] || s; });
+            // 確保所有快取裡的標的也都納入全部標的清單
+            Object.keys(marketDataCache).forEach(s => { if(!allSymbolsMap[s]) allSymbolsMap[s] = stockMap[s] || s; });
 
             let targetSymbols = [];
             if (marketSubTab === 'watchlist') {
