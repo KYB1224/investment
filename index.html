@@ -285,7 +285,7 @@
             console.error("Supabase 初始化失敗:", err);
         }
 
-        let stockMap = {}; // 🚀 改為完全從資料庫動態讀取
+        let stockMap = {};
         let nameMap = {};
         let cachedTransactions = [];
         let expandedSymbols = {};
@@ -619,7 +619,7 @@
                 btn.textContent = '⏳ 更新中...';
             }
 
-            await loadStockDictionary(); // 🚀 每次更新行情時同步重新抓取最新股票字典
+            await loadStockDictionary();
 
             const activeSymbols = getActiveSymbolsList();
             const allSymbolsToFetch = Array.from(new Set([...activeSymbols, ...watchlist, ...Object.keys(stockMap)]));
@@ -881,10 +881,10 @@
                         }
 
                         return `
-                            <div class="flex justify-between items-center bg-morandi-50/70 px-3 py-2 rounded-xl text-[11px]">
-                                <span class="text-slate-500 font-medium whitespace-nowrap">${h.date}</span>
-                                <span class="text-slate-800">收盤: <b>${h.close}</b></span>
-                                <span class="${changeColor}">${changeSign}</span>
+                            <div class="grid grid-cols-3 items-center bg-morandi-50/70 px-3 py-2 rounded-xl text-[11px]">
+                                <span class="text-slate-500 font-medium">${h.date}</span>
+                                <span class="text-slate-800 text-center">收盤: <b>${h.close}</b></span>
+                                <span class="${changeColor} text-right">${changeSign}</span>
                             </div>
                         `;
                     }).join('');
