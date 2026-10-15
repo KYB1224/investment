@@ -285,16 +285,8 @@
             console.error("Supabase 初始化失敗:", err);
         }
 
-        let stockMap = {
-            "2330": "台積電",
-            "0050": "元大台灣50",
-            "00878": "國泰永續高股息",
-            "00919": "群益台灣精選高息",
-            "00981A": "統一台灣增長主動式ETF",
-            "2317": "鴻海",
-            "2454": "聯發科"
-        };
-        let nameMap = Object.fromEntries(Object.entries(stockMap).map(([k, v]) => [v, k]));
+        let stockMap = {}; // 🚀 改為完全從資料庫動態讀取
+        let nameMap = {};
         let cachedTransactions = [];
         let expandedSymbols = {};
         let expandedMarketSymbols = {};
@@ -310,7 +302,7 @@
                 if (!error && user && user.user_metadata && user.user_metadata.watchlist) {
                     watchlist = user.user_metadata.watchlist;
                 } else {
-                    watchlist = []; // 預設完全空白
+                    watchlist = [];
                 }
             } catch (err) {
                 watchlist = [];
@@ -379,6 +371,8 @@
             try {
                 const { data, error } = await _supabase.from('stocks').select('*');
                 if (!error && data && data.length > 0) {
+                    stockMap = {};
+                    nameMap = {};
                     data.forEach(item => {
                         stockMap[item.symbol] = item.name;
                         nameMap[item.name] = item.symbol;
@@ -624,6 +618,8 @@
                 btn.disabled = true;
                 btn.textContent = '⏳ 更新中...';
             }
+
+            await loadStockDictionary(); // 🚀 每次更新行情時同步重新抓取最新股票字典
 
             const activeSymbols = getActiveSymbolsList();
             const allSymbolsToFetch = Array.from(new Set([...activeSymbols, ...watchlist, ...Object.keys(stockMap)]));
