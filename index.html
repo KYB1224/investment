@@ -305,6 +305,7 @@
 
         let stockMap = {};
         let nameMap = {};
+        let stockTypeMap = {}; // 💡 儲存從 stocks 表格讀取到的資產類型
         let cachedTransactions = [];
         let expandedSymbols = {};
         let expandedMarketSymbols = {};
@@ -373,9 +374,11 @@
                 if (!error && data && data.length > 0) {
                     stockMap = {};
                     nameMap = {};
+                    stockTypeMap = {};
                     data.forEach(item => {
                         stockMap[item.symbol] = item.name;
                         nameMap[item.name] = item.symbol;
+                        stockTypeMap[item.symbol] = item.asset_type || 'stock'; // 預設為 stock
                     });
                 }
             } catch (err) {
@@ -616,8 +619,8 @@
             const { error } = await _supabase.from('transactions').insert([newTx]);
             if (error) { alert('新增失敗：' + error.message); return; }
 
-            if (symbol && name && !stockMap[symbol]) {
-                await _supabase.from('stocks').upsert([{ symbol: symbol, name: name }]);
+            if (symbol && name) {
+                await _supabase.from('stocks').upsert([{ symbol: symbol, name: name, asset_type: assetType }]);
                 await loadStockDictionary();
             }
 
@@ -635,12 +638,18 @@
             renderMarketList();
         }
 
-        // 💡 統一判斷是否為共同基金的標準輔助函數
+        // 💡 一勞永逸的判定：優先讀取 Supabase `stocks` 表格中的 asset_type
         function checkIfFund(sym) {
-            const isExplicitFund = cachedTransactions.some(tx => tx.symbol === sym && tx.asset_type === 'fund');
-            const isTaiwanActiveETF = /^[0-9]{4}[A-Z]$/.test(sym);
-            const hasLetters = /[a-zA-Z]/.test(sym) && sym !== 'IX0001';
-            return isExplicitFund || (hasLetters && !isTaiwanActiveETF);
+            if (sym === 'IX0001') return false;
+            if (stockTypeMap[sym]) {
+                return stockTypeMap[sym] === 'fund';
+            }
+            // 若字典裡沒有，退回檢查交易紀錄
+            const txMatch = cachedTransactions.find(tx => tx.symbol === sym);
+            if (txMatch) {
+                return txMatch.asset_type === 'fund';
+            }
+            return false;
         }
 
         async function fetchMarketData(isBackground = false) {
@@ -704,7 +713,8 @@
             cachedTransactions.forEach(tx => {
                 const key = tx.symbol;
                 if (!portfolio[key]) {
-                    portfolio[key] = { symbol: tx.symbol, name: tx.name, asset_type: tx.asset_type, shares: 0, totalCost: 0, dividends: 0, txs: [] };
+                    const dbAssetType = stockTypeMap[key] || tx.asset_type || 'stock';
+                    portfolio[key] = { symbol: tx.symbol, name: tx.name, asset_type: dbAssetType, shares: 0, totalCost: 0, dividends: 0, txs: [] };
                 }
                 portfolio[key].txs.push(tx);
                 const shares = Number(tx.shares) || 0, amount = Number(tx.amount) || 0;
@@ -868,7 +878,6 @@
                     const ma60 = info ? info.ma60 : '--';
                     const isExpanded = !!expandedMarketSymbols[sym];
                     
-                    // 💡 完整恢復近五日收盤價與漲幅明細展開清單
                     let innerContent = `<p class="text-[11px] text-slate-400 text-center py-2">尚未載入近五日收盤明細，請點擊上方「更新行情」</p>`;
                     if (info && info.history && info.history.length > 0) {
                         innerContent = info.history.map((h, hIdx, arr) => {
@@ -910,7 +919,7 @@
                     `;
                 }
 
-                let expandLabel = sym !== 'IX0001' ? `<span class="text-[10px] ${isFund ? 'text-purple-600 bg-purple-100' : 'text-morandi-600 bg-morandi-100'} px-2 py-0.5 rounded-md">${!!expandedMarketSymbols[sym] ? '▲ 收合' : '▼ 明細'}</span>` : '';
+                let expandLabel = `<span class="text-[10px] ${isFund ? 'text-purple-600 bg-purple-100' : 'text-morandi-600 bg-morandi-100'} px-2 py-0.5 rounded-md">${!!expandedMarketSymbols[sym] ? '▲ 收合' : '▼ 明細'}</span>`;
 
                 return `
                     <div onclick="toggleMarketExpand('${sym}')" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-3 cursor-pointer hover:border-morandi-300 transition">
