@@ -1,16 +1,15 @@
 {
   "name": "投資理財小幫手",
-  "short_name": "投資幫手",
-  "start_url": ".",
+  "short_name": "投資小幫手",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#4F46E5",
-  "theme_color": "#4F46E5",
+  "background_color": "#f6f8f7",
+  "theme_color": "#6f887c",
   "icons": [
     {
-      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='512' height='512'><rect width='512' height='512' rx='115' fill='%234F46E5'/><path d='M120 360 L200 280 L280 320 L390 180' stroke='white' stroke-width='36' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M330 180 H390 V240' stroke='white' stroke-width='36' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='390' cy='180' r='20' fill='%2310B981'/></svg>",
+      "src": "icon.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
