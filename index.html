@@ -150,7 +150,7 @@
                     <button onclick="switchMarketSubTab('all')" id="subtab-all" class="flex-1 py-1.5 font-bold rounded-xl transition text-slate-500">📋 全部標的</button>
                 </div>
 
-                <!-- 搜尋列與無圖示排序按鈕 -->
+                <!-- 搜尋列與排序按鈕 -->
                 <div class="flex gap-2 items-center">
                     <div class="relative flex-grow">
                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
@@ -256,7 +256,7 @@
 
     </main>
 
-    <!-- 彈出式追蹤清單排序視窗（箭頭大小固定對齊） -->
+    <!-- 彈出式追蹤清單排序視窗 -->
     <div id="sort-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-xl border border-slate-100 space-y-4 max-h-[80vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -615,6 +615,8 @@
             
             await loadStockDictionary();
             await loadTransactions();
+            
+            // 🚀 登入後自動在背景觸發一次行情更新，確保一進來就有最新即時資料
             fetchMarketData(true);
         }
 
@@ -678,23 +680,30 @@
         }
 
         function toggleMarketExpand(symbol) {
+            if (symbol === 'IX0001') return;
             expandedMarketSymbols[symbol] = !expandedMarketSymbols[symbol];
             renderMarketList();
         }
 
+        // 🚀 最佳化平行非同步批次抓取行情（兼顧即時性與速度）
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
             if (!isBackground) {
                 btn.disabled = true;
-                btn.textContent = '⏳ 更新中...';
+                btn.textContent = '⏳ 更新即時資料中...';
             }
 
             await loadStockDictionary();
 
             const activeSymbols = getActiveSymbolsList();
-            const allSymbolsToFetch = Array.from(new Set([...activeSymbols, ...watchlist, ...Object.keys(stockMap)]));
+            // 結合持股與追蹤清單，避免整張股票字典幾百檔全部無腦抓取，大幅提升即時更新效率
+            const targetSymbolsToFetch = Array.from(new Set([...activeSymbols, ...watchlist]));
+            if (targetSymbolsToFetch.length === 0) {
+                targetSymbolsToFetch.push('2330'); // 預設至少抓一檔台積電
+            }
 
-            await Promise.all(allSymbolsToFetch.map(async (sym) => {
+            // 平行同時發送請求（Promise.all），加速抓取
+            await Promise.all(targetSymbolsToFetch.map(async (sym) => {
                 try {
                     const { data, error } = await _supabase.functions.invoke('get-stock-price', {
                         body: { symbol: sym }
@@ -707,7 +716,7 @@
                         }
                     }
                 } catch (err) {
-                    console.error(`取得 ${sym} 行情失敗:`, err);
+                    console.error(`取得 ${sym} 即時行情失敗:`, err);
                 }
             }));
 
@@ -719,7 +728,7 @@
                 setTimeout(() => {
                     btn.textContent = '🔄 更新行情';
                     btn.disabled = false;
-                }, 10000);
+                }, 1200);
             }
         }
 
@@ -935,29 +944,45 @@
                 const isStarred = watchlist.includes(sym);
                 const isExpanded = !!expandedMarketSymbols[sym];
 
-                let fiveDaysHtml = `<p class="text-[11px] text-slate-400 text-center py-2">尚未載入近五日收盤明細，請點擊上方「更新行情」</p>`;
-                if (info && info.history && info.history.length > 0) {
-                    fiveDaysHtml = info.history.map((h, hIdx, arr) => {
-                        let changeSign = '';
-                        let changeColor = 'text-slate-600';
-                        if (hIdx > 0) {
-                            const prevClose = arr[hIdx - 1].close;
-                            const diff = h.close - prevClose;
-                            const pct = ((diff / prevClose) * 100).toFixed(2);
-                            changeSign = diff >= 0 ? `+${diff.toFixed(2)} (+${pct}%)` : `${diff.toFixed(2)} (${pct}%)`;
-                            changeColor = diff >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold';
-                        } else {
-                            changeSign = '基準日';
-                        }
+                let expandLabel = '';
+                let fiveDaysHtml = '';
 
-                        return `
-                            <div class="grid grid-cols-3 items-center bg-morandi-50/70 px-3 py-2 rounded-xl text-[11px]">
-                                <span class="text-slate-500 font-medium">${h.date}</span>
-                                <span class="text-slate-800 text-center">收盤: <b>${h.close}</b></span>
-                                <span class="${changeColor} text-right">${changeSign}</span>
+                if (sym !== 'IX0001') {
+                    expandLabel = `<span class="text-[10px] text-morandi-600 bg-morandi-100/80 px-2 py-0.5 rounded-md font-medium whitespace-nowrap">${isExpanded ? '▲ 收合' : '▼ 近五日'}</span>`;
+                    
+                    let innerContent = `<p class="text-[11px] text-slate-400 text-center py-2">尚未載入近五日收盤明細，請點擊上方「更新行情」</p>`;
+                    if (info && info.history && info.history.length > 0) {
+                        innerContent = info.history.map((h, hIdx, arr) => {
+                            let changeSign = '';
+                            let changeColor = 'text-slate-600';
+                            if (hIdx > 0) {
+                                const prevClose = arr[hIdx - 1].close;
+                                const diff = h.close - prevClose;
+                                const pct = ((diff / prevClose) * 100).toFixed(2);
+                                changeSign = diff >= 0 ? `+${diff.toFixed(2)} (+${pct}%)` : `${diff.toFixed(2)} (${pct}%)`;
+                                changeColor = diff >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold';
+                            } else {
+                                changeSign = '基準日';
+                            }
+
+                            return `
+                                <div class="grid grid-cols-3 items-center bg-morandi-50/70 px-3 py-2 rounded-xl text-[11px]">
+                                    <span class="text-slate-500 font-medium">${h.date}</span>
+                                    <span class="text-slate-800 text-center">收盤: <b>${h.close}</b></span>
+                                    <span class="${changeColor} text-right">${changeSign}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+
+                    if (isExpanded) {
+                        fiveDaysHtml = `
+                            <div class="pt-3 mt-1 border-t border-slate-100 space-y-1.5 cursor-default" onclick="event.stopPropagation()">
+                                <p class="text-[11px] font-bold text-morandi-700 mb-1">📅 近五日開盤收盤與漲幅走勢：</p>
+                                ${innerContent}
                             </div>
                         `;
-                    }).join('');
+                    }
                 }
 
                 return `
@@ -969,7 +994,7 @@
                                 </button>
                                 <span class="font-bold text-sm text-slate-800 tracking-wide whitespace-nowrap">${sym}</span>
                                 <span class="text-xs text-slate-500 truncate">${stockName}</span>
-                                <span class="text-[10px] text-morandi-600 bg-morandi-100/80 px-2 py-0.5 rounded-md font-medium whitespace-nowrap">${isExpanded ? '▲ 收合' : '▼ 近五日'}</span>
+                                ${expandLabel}
                             </div>
                             <span class="text-xs font-bold text-morandi-800 bg-morandi-100/70 px-2.5 py-1 rounded-xl border border-morandi-200/50 whitespace-nowrap">現價: ${price}</span>
                         </div>
@@ -993,12 +1018,7 @@
                             </div>
                         </div>
 
-                        ${isExpanded ? `
-                            <div class="pt-3 mt-1 border-t border-slate-100 space-y-1.5 cursor-default" onclick="event.stopPropagation()">
-                                <p class="text-[11px] font-bold text-morandi-700 mb-1">📅 近五日開盤收盤與漲幅走勢：</p>
-                                ${fiveDaysHtml}
-                            </div>
-                        ` : ''}
+                        ${fiveDaysHtml}
                     </div>
                 `;
             }).join('');
