@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>投資理財小幫手</title>
 
-    <!-- iOS Safari 專用 PWA 設定與專屬質感桌面圖示 (加上版本號防快取) -->
+    <!-- iOS Safari 專用 PWA 設定與專屬質感桌面圖示 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="投資小幫手">
     <link rel="apple-touch-icon" href="./icon.png?v=2">
     <link rel="apple-touch-icon-precomposed" href="./icon.png?v=2">
@@ -59,9 +59,9 @@
 </head>
 <body class="bg-morandi-50 text-slate-700 min-h-screen flex flex-col pb-24 select-none font-sans antialiased">
 
-    <!-- 頂部標題列 -->
-    <header class="bg-morandi-100/90 backdrop-blur-md text-morandi-800 border-b border-morandi-200/60 sticky top-0 z-50 pt-safe transition-colors duration-300">
-        <div class="max-w-md mx-auto px-5 py-3.5 flex justify-between items-center">
+    <!-- 頂部標題列 (加入 pt-safe 完美避開手機頂部時間與動態島遮擋) -->
+    <header class="bg-morandi-100/95 backdrop-blur-md text-morandi-800 border-b border-morandi-200/60 sticky top-0 z-50 pt-10 pb-3 transition-colors duration-300 shadow-sm">
+        <div class="max-w-md mx-auto px-5 flex justify-between items-center">
             <h1 class="text-sm tracking-wide font-bold flex items-center gap-2 text-morandi-800">
                 <span class="text-base">📈</span> 投資理財小幫手
             </h1>
@@ -468,6 +468,8 @@
                 const { data: { session }, error } = await _supabase.auth.getSession();
                 if (error) throw error;
                 if (session) {
+                    currentUser = session.user; // 🚀 優先綁定 User
+                    loadUserWatchlist();
                     showApp(session.user);
                 } else {
                     showLogin();
@@ -494,6 +496,8 @@
                 if (error) throw error;
                 if (data && data.session) {
                     saveEmailToLocalStorage(email);
+                    currentUser = data.session.user; // 🚀 登入成功立即指定
+                    loadUserWatchlist();
                     showApp(data.session.user);
                 }
             } catch (err) {
@@ -508,6 +512,7 @@
         async function handleLogout() {
             await _supabase.auth.signOut();
             currentUser = null;
+            watchlist = [];
             document.getElementById('password').value = '';
             showLogin();
         }
