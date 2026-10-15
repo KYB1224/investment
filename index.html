@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>投資理財小幫手</title>
 
-    <!-- iOS Safari 專用 PWA 設定與莫蘭迪綠桌面圖示 -->
+    <!-- iOS Safari 專用 PWA 設定與專屬質感桌面圖示 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="投資小幫手">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='512' height='512'><rect width='512' height='512' rx='115' fill='%237a9387'/><path d='M120 360 L200 280 L280 320 L390 180' stroke='white' stroke-width='32' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M330 180 H390 V240' stroke='white' stroke-width='32' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='390' cy='180' r='18' fill='%23d3b88c'/></svg>">
+    <link rel="apple-touch-icon" href="icon.png">
 
     <!-- Android Chrome 專用 Manifest 連結 -->
     <link rel="manifest" href="manifest.json">
@@ -918,7 +918,6 @@
             }).join('');
         }
 
-        // 🎨 歷史明細全新優化渲染邏輯
         function renderHistoryList() {
             const listEl = document.getElementById('transaction-list');
             if (cachedTransactions.length === 0) {
@@ -936,7 +935,6 @@
 
                 return `
                     <div class="bg-slate-50/90 p-4 rounded-2xl border border-slate-100 space-y-2 shadow-sm">
-                        <!-- 第一排：日期與動作標籤（左），交易總額（右） -->
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-2">
                                 <span class="text-xs text-slate-400 font-mono tracking-wide">${tx.date}</span>
@@ -945,13 +943,11 @@
                             <span class="font-bold text-slate-900 text-base tracking-tight">NT$ ${Number(tx.amount).toLocaleString()}</span>
                         </div>
 
-                        <!-- 第二排：股票代號與完整中文名稱（獨立整排） -->
                         <div class="text-sm font-bold text-slate-800 pt-0.5">
                             <span class="font-mono mr-1">${tx.symbol}</span>
                             <span class="text-slate-700">${displayName}</span>
                         </div>
 
-                        <!-- 第三排：交易詳細數據（左），刪除按鈕（右） -->
                         <div class="flex justify-between items-end pt-1 border-t border-slate-200/60 text-xs text-slate-500">
                             <div>
                                 <p class="text-[11px]">${tx.action === 'DIVIDEND' ? '配息入帳 (股數: ' + tx.shares + ' | 每股: ' + tx.price + ')' : '股數: ' + tx.shares + ' | 單價: ' + tx.price}</p>
