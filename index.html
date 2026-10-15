@@ -150,14 +150,14 @@
                     <button onclick="switchMarketSubTab('all')" id="subtab-all" class="flex-1 py-1.5 font-bold rounded-xl transition text-slate-500">📋 全部標的</button>
                 </div>
 
-                <!-- 搜尋列與排序按鈕並排 -->
+                <!-- 搜尋列與無圖示排序按鈕 -->
                 <div class="flex gap-2 items-center">
                     <div class="relative flex-grow">
                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
                         <input type="text" id="market-search-input" oninput="renderMarketList()" placeholder="輸入代號或名稱快速搜尋..." class="w-full h-11 pl-9 pr-4 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-morandi-300 focus:border-morandi-400 transition shadow-sm">
                     </div>
-                    <button id="sort-watchlist-btn" onclick="openSortModal()" class="hidden bg-morandi-100 hover:bg-morandi-200 text-morandi-800 px-4 h-11 rounded-2xl text-xs font-bold transition shadow-sm whitespace-nowrap items-center gap-1 border border-morandi-200">
-                        🔄 排序
+                    <button id="sort-watchlist-btn" onclick="openSortModal()" class="hidden bg-morandi-100 hover:bg-morandi-200 text-morandi-800 px-4 h-11 rounded-2xl text-xs font-bold transition shadow-sm whitespace-nowrap items-center border border-morandi-200">
+                        排序
                     </button>
                 </div>
 
@@ -256,7 +256,7 @@
 
     </main>
 
-    <!-- 彈出式追蹤清單排序視窗 -->
+    <!-- 彈出式追蹤清單排序視窗（箭頭大小固定對齊） -->
     <div id="sort-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-xl border border-slate-100 space-y-4 max-h-[80vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -513,15 +513,18 @@
             const container = document.getElementById('sort-list-container');
             container.innerHTML = watchlist.map((sym, idx) => {
                 const stockName = stockMap[sym] || sym;
+                const isFirst = idx === 0;
+                const isLast = idx === watchlist.length - 1;
+
                 return `
                     <div class="flex justify-between items-center py-2 px-1">
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
                             <span class="font-bold text-xs text-slate-800">${sym}</span>
-                            <span class="text-xs text-slate-500 truncate max-w-[120px]">${stockName}</span>
+                            <span class="text-xs text-slate-500 truncate max-w-[140px]">${stockName}</span>
                         </div>
-                        <div class="flex items-center gap-1">
-                            <button onclick="moveWatchlistModal(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-25 cursor-not-allowed"' : ''} class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center justify-center transition">⬆</button>
-                            <button onclick="moveWatchlistModal(${idx}, 1)" ${idx === watchlist.length - 1 ? 'disabled class="opacity-25 cursor-not-allowed"' : ''} class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center justify-center transition">⬇</button>
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <button onclick="moveWatchlistModal(${idx}, -1)" ${isFirst ? 'disabled' : ''} class="w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center transition ${isFirst ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">⬆</button>
+                            <button onclick="moveWatchlistModal(${idx}, 1)" ${isLast ? 'disabled' : ''} class="w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center transition ${isLast ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">⬇</button>
                         </div>
                     </div>
                 `;
