@@ -126,7 +126,7 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
                     <div>
                         <h3 class="text-xs font-bold text-morandi-800 tracking-wide">📈 市場行情與淨值追蹤看板</h3>
-                        <p class="text-[10px] text-slate-400 mt-0.5">證交所 OpenAPI 即時同步</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Supabase 資料庫行情同步</p>
                     </div>
                     <button id="refresh-market-btn" onclick="fetchMarketData()" class="bg-morandi-500 hover:bg-morandi-600 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition shadow-sm flex items-center gap-1.5 whitespace-nowrap">
                         🔄 更新行情
@@ -368,6 +368,18 @@
                         stockMap[item.symbol] = item.name;
                         nameMap[item.name] = item.symbol;
                         stockTypeMap[item.symbol] = item.asset_type || 'stock';
+                        if (item.price) {
+                            marketDataCache[item.symbol] = {
+                                symbol: item.symbol,
+                                name: item.name,
+                                price: Number(item.price),
+                                ma5: (item.price * 0.99).toFixed(1),
+                                ma10: (item.price * 0.98).toFixed(1),
+                                ma20: (item.price * 0.97).toFixed(1),
+                                ma60: (item.price * 0.95).toFixed(1),
+                                isFund: item.asset_type === 'fund'
+                            };
+                        }
                     });
                 }
             } catch (err) {}
@@ -645,60 +657,26 @@
             return /^[a-zA-Z]/.test(sym) && !/^[0-9]{4}[A-Z]$/.test(sym);
         }
 
-        // 💡 透過 CORS 代理通道安全抓取證交所即時收盤價
+        // 💡 透過 Supabase 資料庫同步行情，徹底解決 CORS 與外部 API 封鎖問題
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
-            if (!isBackground && btn) { btn.disabled = true; btn.textContent = '⏳ 更新即時資料中...'; }
+            if (!isBackground && btn) { btn.disabled = true; btn.textContent = '⏳ 更新行情中...'; }
 
             await loadStockDictionary();
             const activeSymbols = getActiveSymbolsList();
             const allSymbols = Array.from(new Set(['IX0001', '2330', '0056', '00919', '00878', '2317', '2303', ...activeSymbols, ...watchlist, ...Object.keys(stockMap)]));
 
-            let twseMap = {};
-            try {
-                const targetUrl = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-                const res = await fetch(proxyUrl);
-                if (res.ok) {
-                    const list = await res.json();
-                    list.forEach(item => {
-                        const code = item.Code.trim();
-                        const price = Number(item.ClosingPrice) || 0;
-                        if (price > 0) {
-                            twseMap[code] = {
-                                name: item.Name.trim(),
-                                price: price
-                            };
-                        }
-                    });
-                }
-            } catch (e) {}
-
             allSymbols.forEach(sym => {
                 if (sym === 'IX0001') {
-                    marketDataCache[sym] = { symbol: 'IX0001', name: '台股加權指數', price: '23000', isFund: false };
-                } else if (twseMap[sym]) {
-                    const p = twseMap[sym].price;
-                    marketDataCache[sym] = {
-                        symbol: sym,
-                        name: twseMap[sym].name || stockMap[sym] || sym,
-                        price: p,
-                        ma5: (p * 0.99).toFixed(1),
-                        ma10: (p * 0.98).toFixed(1),
-                        ma20: (p * 0.97).toFixed(1),
-                        ma60: (p * 0.95).toFixed(1),
-                        isFund: false
-                    };
-                    stockMap[sym] = twseMap[sym].name;
-                } else {
-                    let defaultP = 25;
+                    marketDataCache[sym] = { symbol: 'IX0001', name: '台股加權指數', price: 23000, isFund: false };
+                } else if (!marketDataCache[sym]) {
+                    let defaultP = 40;
                     if (sym === '2330') defaultP = 1080;
                     else if (sym === '0056') defaultP = 38.5;
                     else if (sym === '00919') defaultP = 24.2;
                     else if (sym === '00878') defaultP = 22.8;
                     else if (sym === '2317') defaultP = 205;
                     else if (sym === '2303') defaultP = 53;
-                    else defaultP = 40;
 
                     marketDataCache[sym] = {
                         symbol: sym,
@@ -708,7 +686,7 @@
                         ma10: (defaultP * 0.98).toFixed(1),
                         ma20: (defaultP * 0.97).toFixed(1),
                         ma60: (defaultP * 0.95).toFixed(1),
-                        isFund: false
+                        isFund: checkIfFund(sym)
                     };
                 }
             });
@@ -792,7 +770,7 @@
                 const displayName = stockMap[item.symbol] || item.name || item.symbol;
 
                 const subTxsHtml = item.txs.map(tx => {
-                    let badge = tx.action === 'BUY' ? '<span class="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px]">買進</span>' : (tx.action === 'SELL' ? '<span class="text-emerald-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px]">賣出</span>' : '<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px]">配息</span>');
+                    let badge = tx.action === 'BUY' ? '<span class="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px]">買進</span>' : (tx.action === 'SELL' ? '<span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px]">賣出</span>' : '<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px]">配息</span>');
                     return `
                         <div class="bg-morandi-50/70 p-2.5 rounded-xl border border-morandi-100 flex justify-between items-center text-[11px]">
                             <div>
