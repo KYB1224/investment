@@ -524,10 +524,16 @@
         async function checkUser() {
             try {
                 const { data: { session }, error } = await _supabase.auth.getSession();
-                if (error) throw error;
-                if (session) { currentUser = session.user; await loadUserWatchlist(); showApp(session.user); }
-                else showLogin();
-            } catch (err) { showLogin(); }
+                if (session && session.user) {
+                    currentUser = session.user;
+                    await showApp(session.user);
+                } else {
+                    showLogin();
+                }
+            } catch (err) {
+                console.error("檢查登入狀態失敗:", err);
+                showLogin();
+            }
         }
 
         async function handleLogin(e) {
@@ -537,7 +543,8 @@
             const errEl = document.getElementById('login-error');
             const loginBtn = document.getElementById('login-btn');
             errEl.classList.add('hidden');
-            loginBtn.textContent = '登入中...'; loginBtn.disabled = true;
+            loginBtn.textContent = '登入中...'; 
+            loginBtn.disabled = true;
 
             try {
                 const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
@@ -545,20 +552,24 @@
                 if (data && data.session) {
                     saveEmailToLocalStorage(email);
                     currentUser = data.session.user;
-                    await loadUserWatchlist();
-                    showApp(data.session.user);
+                    await showApp(data.session.user);
+                } else {
+                    throw new Error("無法取得登入工作階段");
                 }
             } catch (err) {
                 errEl.textContent = "登入失敗：" + (err.message || "未知錯誤");
                 errEl.classList.remove('hidden');
-            } finally {
-                loginBtn.textContent = '登入系統'; loginBtn.disabled = false;
+                loginBtn.textContent = '登入系統'; 
+                loginBtn.disabled = false;
             }
         }
 
         async function handleLogout() {
-            await _supabase.auth.signOut();
-            currentUser = null; watchlist = [];
+            try {
+                await _supabase.auth.signOut();
+            } catch (e) {}
+            currentUser = null; 
+            watchlist = [];
             document.getElementById('password').value = '';
             showLogin();
         }
@@ -568,21 +579,29 @@
             document.getElementById('app-section').classList.add('hidden');
             document.getElementById('bottom-nav').classList.add('hidden');
             document.getElementById('user-info').classList.add('hidden');
-            document.getElementById('password').value = '';
+            const loginBtn = document.getElementById('login-btn');
+            if (loginBtn) {
+                loginBtn.textContent = '登入系統';
+                loginBtn.disabled = false;
+            }
             loadInitialEmail();
         }
 
         async function showApp(user) {
             currentUser = user;
-            await loadUserWatchlist();
+            
+            // 強制顯示主畫面與下方導覽列
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
             document.getElementById('bottom-nav').classList.remove('hidden');
             document.getElementById('user-info').classList.remove('hidden');
             document.getElementById('user-email').textContent = user.email;
-            await loadStockDictionary();
-            await loadTransactions();
-            fetchMarketData(true);
+
+            // 背景非同步載入資料
+            try { await loadUserWatchlist(); } catch (e) {}
+            try { await loadStockDictionary(); } catch (e) {}
+            try { await loadTransactions(); } catch (e) {}
+            try { fetchMarketData(true); } catch (e) {}
         }
 
         async function handleAddTransaction(e) {
@@ -649,7 +668,6 @@
             return /^[a-zA-Z]/.test(sym) && !/^[0-9]{4}[A-Z]$/.test(sym);
         }
 
-        // 💡 修正版：透過 corsproxy.io 穩定包裝 Yahoo Finance，絕不帶入錯誤假數字
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
             if (!isBackground && btn) { btn.disabled = true; btn.textContent = '⏳ 更新即時資料中...'; }
@@ -722,7 +740,6 @@
                         } catch (e) {}
                     }
 
-                    // 如果成功取得價格或歷史資料
                     if (price > 0 || history.length > 0) {
                         const lastPrice = price > 0 ? price : (history[history.length - 1]?.close || 0);
                         marketDataCache[sym] = {
@@ -1064,4 +1081,13 @@
         }
 
         async function deleteTx(id) {
-            if (!confirm('確定要刪除這筆紀錄嗎？'))
+            if (!confirm('確定要刪除這筆紀錄嗎？')) return;
+            const { error } = await _supabase.from('transactions').delete().eq('id', id);
+            if (error) alert('刪除失敗：' + error.message);
+            else loadTransactions();
+        }
+
+        checkUser();
+    </script>
+</body>
+</html>
