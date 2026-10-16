@@ -126,7 +126,7 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
                     <div>
                         <h3 class="text-xs font-bold text-morandi-800 tracking-wide">📈 市場行情與淨值追蹤看板</h3>
-                        <p class="text-[10px] text-slate-400 mt-0.5">雲端資料庫與即時同步</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">證交所 OpenAPI 即時同步</p>
                     </div>
                     <button id="refresh-market-btn" onclick="fetchMarketData()" class="bg-morandi-500 hover:bg-morandi-600 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition shadow-sm flex items-center gap-1.5 whitespace-nowrap">
                         🔄 更新行情
@@ -194,7 +194,7 @@
                     </div>
 
                     <div id="fund-hint-text" class="hidden -mt-1 text-[10px] text-morandi-600 font-medium px-1 flex items-center gap-1">
-                        💡 基金請輸入代碼（如 A36004 等）
+                        💡 基金請輸入代碼
                     </div>
 
                     <div>
@@ -664,7 +664,7 @@
             return /^[a-zA-Z]/.test(sym) && !/^[0-9]{4}[A-Z]$/.test(sym);
         }
 
-        // 💡 終極直連安全抓取（完全捨棄 CORS 代理，改由證交所公開 JSON 與容錯處理）
+        // 💡 完整隔離 CORS，僅透過證交所 OpenAPI 抓取上市股票/ETF 現價
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
             if (!isBackground && btn) { btn.disabled = true; btn.textContent = '⏳ 更新即時資料中...'; }
@@ -673,7 +673,6 @@
             const activeSymbols = getActiveSymbolsList();
             const allSymbols = Array.from(new Set(['IX0001', ...activeSymbols, ...watchlist, ...Object.keys(stockMap)]));
 
-            // 嘗試透過證交所 OpenAPI 批次取得台股現價
             let twseMap = {};
             try {
                 const res = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL');
@@ -696,9 +695,9 @@
                     const isFund = checkIfFund(sym);
 
                     if (sym === 'IX0001') {
-                        price = 23000; // 預設基準
+                        price = 23000; 
                     } else if (isFund) {
-                        price = 0; // 基金由用戶手動登入時紀錄淨值，若無網路則維持 0
+                        price = 0; 
                     } else {
                         if (twseMap[sym]) {
                             price = twseMap[sym].price;
@@ -917,8 +916,6 @@
                         </div>
                     `;
                 }
-
-                let expandLabel = `<span class="text-[10px] ${isFund ? 'text-purple-600 bg-purple-100' : 'text-morandi-600 bg-morandi-100'} px-2 py-0.5 rounded-md">明細</span>`;
 
                 return `
                     <div onclick="toggleMarketExpand('${sym}')" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-3 cursor-pointer hover:border-morandi-300 transition">
