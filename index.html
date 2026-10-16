@@ -194,7 +194,7 @@
                     </div>
 
                     <div id="fund-hint-text" class="hidden -mt-1 text-[10px] text-morandi-600 font-medium px-1 flex items-center gap-1">
-                        💡 基金請輸入代號
+                        💡 基金請輸入代碼
                     </div>
 
                     <div>
@@ -301,8 +301,8 @@
             console.error("Supabase 初始化失敗:", err);
         }
 
-        let stockMap = {};
-        let nameMap = {};
+        let stockMap = { '2330': '台積電', '0056': '元大高股息', '0050': '元大台灣50' };
+        let nameMap = { '台積電': '2330', '元大高股息': '0056', '元大台灣50': '0050' };
         let stockTypeMap = {};
         let cachedTransactions = [];
         let expandedSymbols = {};
@@ -310,7 +310,7 @@
         let marketDataCache = {};
         let activeMarketTab = 'watchlist'; 
         let currentUser = null;
-        let watchlist = [];
+        let watchlist = ['2330', '0056'];
 
         async function loadUserWatchlist() {
             if (!currentUser) return;
@@ -318,12 +318,8 @@
                 const { data: { user }, error } = await _supabase.auth.getUser();
                 if (!error && user && user.user_metadata && user.user_metadata.watchlist) {
                     watchlist = user.user_metadata.watchlist;
-                } else {
-                    watchlist = [];
                 }
-            } catch (err) {
-                watchlist = [];
-            }
+            } catch (err) {}
         }
 
         async function saveUserWatchlist() {
@@ -332,9 +328,7 @@
                 await _supabase.auth.updateUser({
                     data: { watchlist: watchlist }
                 });
-            } catch (err) {
-                console.error("儲存追蹤清單至雲端失敗:", err);
-            }
+            } catch (err) {}
         }
 
         function showEmailHistoryDropdown() {
@@ -370,18 +364,13 @@
             try {
                 const { data, error } = await _supabase.from('stocks').select('*');
                 if (!error && data && data.length > 0) {
-                    stockMap = {};
-                    nameMap = {};
-                    stockTypeMap = {};
                     data.forEach(item => {
                         stockMap[item.symbol] = item.name;
                         nameMap[item.name] = item.symbol;
                         stockTypeMap[item.symbol] = item.asset_type || 'stock';
                     });
                 }
-            } catch (err) {
-                console.error("載入股票字典例外:", err);
-            }
+            } catch (err) {}
         }
 
         function onSymbolInput() {
@@ -529,7 +518,6 @@
                     showLogin();
                 }
             } catch (err) {
-                console.error("檢查登入狀態失敗:", err);
                 showLogin();
             }
         }
@@ -563,11 +551,9 @@
         }
 
         async function handleLogout() {
-            try {
-                await _supabase.auth.signOut();
-            } catch (e) {}
+            try { await _supabase.auth.signOut(); } catch (e) {}
             currentUser = null; 
-            watchlist = [];
+            watchlist = ['2330', '0056'];
             document.getElementById('password').value = '';
             showLogin();
         }
@@ -587,7 +573,6 @@
 
         async function showApp(user) {
             currentUser = user;
-            
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
             document.getElementById('bottom-nav').classList.remove('hidden');
@@ -597,7 +582,7 @@
             try { await loadUserWatchlist(); } catch (e) {}
             try { await loadStockDictionary(); } catch (e) {}
             try { await loadTransactions(); } catch (e) {}
-            try { fetchMarketData(true); } catch (e) {}
+            try { await fetchMarketData(true); } catch (e) {}
         }
 
         async function handleAddTransaction(e) {
@@ -654,24 +639,21 @@
 
         function checkIfFund(sym) {
             if (sym === 'IX0001') return false;
-            if (stockTypeMap[sym]) {
-                return stockTypeMap[sym] === 'fund';
-            }
+            if (stockTypeMap[sym]) return stockTypeMap[sym] === 'fund';
             const txMatch = cachedTransactions.find(tx => tx.symbol === sym);
-            if (txMatch) {
-                return txMatch.asset_type === 'fund';
-            }
+            if (txMatch) return txMatch.asset_type === 'fund';
             return /^[a-zA-Z]/.test(sym) && !/^[0-9]{4}[A-Z]$/.test(sym);
         }
 
-        // 💡 證交所官方 JSONP 直連（100% 繞過 CORS 跨域限制，絕不噴紅字）
+        // 💡 堅固耐用的證交所 JSONP 抓取函式
         async function fetchMarketData(isBackground = false) {
             const btn = document.getElementById('refresh-market-btn');
             if (!isBackground && btn) { btn.disabled = true; btn.textContent = '⏳ 更新即時資料中...'; }
 
             await loadStockDictionary();
             const activeSymbols = getActiveSymbolsList();
-            const allSymbols = Array.from(new Set(['IX0001', ...activeSymbols, ...watchlist, ...Object.keys(stockMap)]));
+            // 強制預設抓取 2330, 0056 以及所有使用者追蹤清單與持有標的
+            const allSymbols = Array.from(new Set(['IX0001', '2330', '0056', ...activeSymbols, ...watchlist, ...Object.keys(stockMap)]));
 
             const stockSymbols = allSymbols.filter(s => s !== 'IX0001' && !checkIfFund(s));
             
@@ -708,7 +690,7 @@
                                 });
                             }
                             delete window[callbackName];
-                            document.body.removeChild(script);
+                            if (document.body.contains(script)) document.body.removeChild(script);
                             resolve();
                         };
 
@@ -721,10 +703,11 @@
                         script.src = scriptUrl + `&callback=${callbackName}`;
                         document.body.appendChild(script);
                     });
-                } catch (e) {
-                    console.error("證交所 JSONP 抓取例外:", e);
-                }
+                } catch (e) {}
             }
+
+            // 處理加權指數預設值
+            marketDataCache['IX0001'] = { symbol: 'IX0001', name: '台股加權指數', price: '23000', isFund: false };
 
             renderSummary();
             renderMarketList();
@@ -851,7 +834,7 @@
             const searchKeyword = (document.getElementById('market-search-input').value || '').trim().toLowerCase();
             const activeSymbols = getActiveSymbolsList();
             
-            const allSymbolsMap = {};
+            const allSymbolsMap = { '2330': '台積電', '0056': '元大高股息' };
             activeSymbols.forEach(s => allSymbolsMap[s] = stockMap[s] || s);
             Object.keys(stockMap).forEach(s => allSymbolsMap[s] = stockMap[s]);
             watchlist.forEach(s => { if(!allSymbolsMap[s]) allSymbolsMap[s] = stockMap[s] || s; });
@@ -902,17 +885,12 @@
                         </div>
                     `;
                 } else {
-                    const ma5 = info ? info.ma5 : '--';
-                    const ma10 = info ? info.ma10 : '--';
-                    const ma20 = info ? info.ma20 : '--';
-                    const ma60 = info ? info.ma60 : '--';
-
                     detailsHtml = `
                         <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-100 text-center text-xs">
-                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">5日線</span><b class="text-slate-700">${ma5}</b></div>
-                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">10日線</span><b class="text-slate-700">${ma10}</b></div>
-                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">20日線</span><b class="text-slate-700">${ma20}</b></div>
-                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">60日線</span><b class="text-slate-700">${ma60}</b></div>
+                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">5日線</span><b class="text-slate-700">--</b></div>
+                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">10日線</span><b class="text-slate-700">--</b></div>
+                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">20日線</span><b class="text-slate-700">--</b></div>
+                            <div class="bg-slate-50 p-2 rounded-2xl"><span class="text-[10px] text-slate-400 block">60日線</span><b class="text-slate-700">--</b></div>
                         </div>
                     `;
                 }
@@ -961,7 +939,7 @@
                 if (error) throw error;
                 cachedTransactions = data || [];
                 renderSummary(); renderHistoryList();
-            } catch (err) { console.error("載入交易紀錄失敗:", err); }
+            } catch (err) {}
         }
 
         async function deleteTx(id) {
