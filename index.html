@@ -620,7 +620,7 @@
             if (error) { alert('新增失敗：' + error.message); return; }
 
             if (symbol && name) {
-                await _supabase.from('stocks'].upsert([{ symbol: symbol, name: name, asset_type: assetType }]);
+                await _supabase.from('stocks').upsert({ symbol: symbol, name: name, asset_type: assetType });
                 await loadStockDictionary();
             }
 
@@ -689,7 +689,6 @@
                     };
                     stockMap[sym] = twseMap[sym].name;
                 } else {
-                    // 若不在證交所清單中（例如熱門ETF如 00919、00878 等），賦予證交所目前真實市價水準
                     let defaultP = 25;
                     if (sym === '2330') defaultP = 1080;
                     else if (sym === '0056') defaultP = 38.5;
@@ -791,7 +790,7 @@
                 const displayName = stockMap[item.symbol] || item.name || item.symbol;
 
                 const subTxsHtml = item.txs.map(tx => {
-                    let badge = tx.action === 'BUY' ? '<span class="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px]">買進</span>' : (tx.action === 'SELL' ? '<span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px]">賣出</span>' : '<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px]">配息</span>');
+                    let badge = tx.action === 'BUY' ? '<span class="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px]">買進</span>' : (tx.action === 'SELL' ? '<span class="text-emerald-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px]">賣出</span>' : '<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px]">配息</span>');
                     return `
                         <div class="bg-morandi-50/70 p-2.5 rounded-xl border border-morandi-100 flex justify-between items-center text-[11px]">
                             <div>
