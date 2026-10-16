@@ -590,14 +590,12 @@
         async function showApp(user) {
             currentUser = user;
             
-            // 強制顯示主畫面與下方導覽列
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
             document.getElementById('bottom-nav').classList.remove('hidden');
             document.getElementById('user-info').classList.remove('hidden');
             document.getElementById('user-email').textContent = user.email;
 
-            // 背景非同步載入資料
             try { await loadUserWatchlist(); } catch (e) {}
             try { await loadStockDictionary(); } catch (e) {}
             try { await loadTransactions(); } catch (e) {}
@@ -686,54 +684,61 @@
                     if (sym === 'IX0001') {
                         try {
                             const targetUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/%5ETWII?range=5d&interval=1d';
-                            const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+                            const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`);
                             if (res.ok) {
                                 const yJson = await res.json();
-                                const meta = yJson.chart.result[0].meta;
-                                price = meta.regularMarketPrice || meta.chartPreviousClose || 0;
-                                const timestamps = yJson.chart.result[0].timestamp || [];
-                                const quotes = yJson.chart.result[0].indicators.quote[0].close || [];
-                                for (let i = 0; i < timestamps.length; i++) {
-                                    if (quotes[i]) {
-                                        history.push({
-                                            date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
-                                            close: Number(quotes[i].toFixed(2))
-                                        });
+                                const result = yJson?.chart?.result?.[0];
+                                if (result) {
+                                    const meta = result.meta;
+                                    price = meta.regularMarketPrice || meta.chartPreviousClose || 0;
+                                    const timestamps = result.timestamp || [];
+                                    const quotes = result.indicators.quote[0].close || [];
+                                    for (let i = 0; i < timestamps.length; i++) {
+                                        if (quotes[i]) {
+                                            history.push({
+                                                date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+                                                close: Number(quotes[i].toFixed(2))
+                                            });
+                                        }
                                     }
                                 }
                             }
                         } catch (err) {}
                     } else if (isFund) {
-                        const res = await fetch(`https://fund.cnyes.com/api/v1/funds/${sym}/nav?page=1&items=5`);
-                        if (res.ok) {
-                            const json = await res.json();
-                            const items = json?.items || json?.data?.items || json?.result?.items || [];
-                            if (items.length > 0) {
-                                price = Number(items[0].nav || items[0].price || items[0].netAssetValue) || 0;
-                                history = items.slice(0, 5).map((h) => ({
-                                    date: h.tradeDate || h.date || h.time,
-                                    close: Number(h.nav || h.price || h.netAssetValue) || price
-                                }));
+                        try {
+                            const res = await fetch(`https://fund.cnyes.com/api/v1/funds/${sym}/nav?page=1&items=5`);
+                            if (res.ok) {
+                                const json = await res.json();
+                                const items = json?.items || json?.data?.items || json?.result?.items || [];
+                                if (items.length > 0) {
+                                    price = Number(items[0].nav || items[0].price || items[0].netAssetValue) || 0;
+                                    history = items.slice(0, 5).map((h) => ({
+                                        date: h.tradeDate || h.date || h.time,
+                                        close: Number(h.nav || h.price || h.netAssetValue) || price
+                                    }));
+                                }
                             }
-                        }
+                        } catch (err) {}
                     } else {
                         try {
                             const ySym = sym + (sym.length === 4 ? '.TW' : '');
                             const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ySym}?range=5d&interval=1d`;
-                            const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+                            const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`);
                             if (res.ok) {
                                 const yJson = await res.json();
-                                const result = yJson.chart.result[0];
-                                const meta = result.meta;
-                                price = meta.regularMarketPrice || meta.chartPreviousClose || 0;
-                                const timestamps = result.timestamp || [];
-                                const quotes = result.indicators.quote[0].close || [];
-                                for (let i = 0; i < timestamps.length; i++) {
-                                    if (quotes[i]) {
-                                        history.push({
-                                            date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
-                                            close: Number(quotes[i].toFixed(2))
-                                        });
+                                const result = yJson?.chart?.result?.[0];
+                                if (result) {
+                                    const meta = result.meta;
+                                    price = meta.regularMarketPrice || meta.chartPreviousClose || 0;
+                                    const timestamps = result.timestamp || [];
+                                    const quotes = result.indicators.quote[0].close || [];
+                                    for (let i = 0; i < timestamps.length; i++) {
+                                        if (quotes[i]) {
+                                            history.push({
+                                                date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+                                                close: Number(quotes[i].toFixed(2))
+                                            });
+                                        }
                                     }
                                 }
                             }
